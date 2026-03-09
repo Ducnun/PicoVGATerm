@@ -2,8 +2,6 @@
 #include "hardware/pio.h"
 #include "vga.h"
 
-#define PICO_DEFAULT_LED_PIN 25
-
 int main() {
 
     stdio_init_all();
