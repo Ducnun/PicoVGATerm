@@ -11,26 +11,24 @@ int main() {
     gpio_init(LED_PIN);
     gpio_set_dir(LED_PIN, GPIO_OUT);
 
-    // Set all RGB pins high to mitigate black screen
-    for (int i = R_MSB_PIN; i < 6; i++){
-        gpio_set_dir(i, GPIO_OUT);
-        gpio_put(i, 1);
-    }
-    
     // Select timing table and setup hsync program
     timing = &vga_640x480;
     PIO pio = pio0;
     uint sm = pio_claim_unused_sm(pio, true);
     uint offset = pio_add_program(pio, &hsync_program);
 
+    // Set all RGB pins high to mitigate black screen
+    for (uint8_t i = R_MSB_PIN; i <= B_LSB_PIN; i++) {
+        gpio_init(i);
+        gpio_set_dir(i, GPIO_OUT);
+        gpio_put(i, 1);
+    }
+    
+
     start_hsync(pio, sm, offset);
     start_vsync_hook();
 
     while (true) {
-        gpio_put(LED_PIN, 1);
-        sleep_ms(500);
-
-        gpio_put(LED_PIN, 0);
-        sleep_ms(500);
+        tight_loop_contents();
     }
 }

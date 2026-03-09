@@ -36,11 +36,46 @@ void __isr hsync_irq_handler() {
     if (line_count >= timing->total_lines) {
         line_count = 0;
     }
+
+    #ifdef TEST_PATTERN
+    int lc = line_count % 60;
+    if (lc <= 20){
+        gpio_put(R_MSB_PIN, 1);
+        gpio_put(R_MID_PIN, 1);
+        gpio_put(R_LSB_PIN, 1);
+        gpio_put(G_MSB_PIN, 0);
+        gpio_put(G_MID_PIN, 0);
+        gpio_put(G_LSB_PIN, 0);
+        gpio_put(B_MSB_PIN, 0);
+        gpio_put(B_LSB_PIN, 0);
+    }
+    else if (lc <= 40){
+        gpio_put(R_MSB_PIN, 0);
+        gpio_put(R_MID_PIN, 0);
+        gpio_put(R_LSB_PIN, 0);
+        gpio_put(G_MSB_PIN, 1);
+        gpio_put(G_MID_PIN, 1);
+        gpio_put(G_LSB_PIN, 1);
+        gpio_put(B_MSB_PIN, 0);
+        gpio_put(B_LSB_PIN, 0);
+    }
+    else if (lc <= 60){
+        gpio_put(R_MSB_PIN, 0);
+        gpio_put(R_MID_PIN, 0);
+        gpio_put(R_LSB_PIN, 0);
+        gpio_put(G_MSB_PIN, 0);
+        gpio_put(G_MID_PIN, 0);
+        gpio_put(G_LSB_PIN, 0);
+        gpio_put(B_MSB_PIN, 1);
+        gpio_put(B_LSB_PIN, 1);
+    }
+    #endif
 }
 
 void start_vsync_hook(){
     gpio_init(VSYNC_PIN);
     gpio_set_dir(VSYNC_PIN, GPIO_OUT);
+    gpio_put(VSYNC_PIN, 1);
     irq_set_exclusive_handler(PIO0_IRQ_0, hsync_irq_handler);
     irq_set_enabled(PIO0_IRQ_0, true);
     pio_set_irq0_source_enabled(pio0, pis_interrupt0, true);
