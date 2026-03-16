@@ -23,12 +23,17 @@ int main() {
         gpio_set_dir(i, GPIO_OUT);
         gpio_put(i, 1);
     }
-    
 
-    start_hsync(pio, sm, offset);
+    // Preempt vsync hook
     start_vsync_hook();
+    start_hsync(pio, sm, offset);
+
+    // Setup scanline state machine
+    sm = pio_claim_unused_sm(pio, true);
+    offset = pio_add_program(pio, &scanline_out_program);
+    start_scanline_out(pio, sm, offset);
 
     while (true) {
-        tight_loop_contents();
+        render_scanline();
     }
 }

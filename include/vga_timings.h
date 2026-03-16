@@ -5,6 +5,8 @@
 typedef struct {
     uint16_t visible_lines;
     uint16_t total_lines;
+    uint16_t visisble_columns;
+    uint16_t total_columns;
     uint16_t vsync_start;
     uint16_t vsync_end;
     float    vfreq;
