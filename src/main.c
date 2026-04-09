@@ -1,4 +1,3 @@
-#include "pico/stdlib.h"
 #include "hardware/pio.h"
 #include "vga.h"
 
@@ -15,7 +14,6 @@ int main() {
     timing = &vga_640x480;
     PIO pio = pio0;
     uint sm = pio_claim_unused_sm(pio, true);
-    uint offset = pio_add_program(pio, &hsync_program);
 
     // Set all RGB pins high to mitigate black screen
     for (uint8_t i = R_MSB_PIN; i <= B_LSB_PIN; i++) {
@@ -26,12 +24,13 @@ int main() {
 
     // Preempt vsync hook
     start_vsync_hook();
-    start_hsync(pio, sm, offset);
 
     // Setup scanline state machine
     sm = pio_claim_unused_sm(pio, true);
-    offset = pio_add_program(pio, &scanline_out_program);
+    uint offset = pio_add_program(pio, &scanline_out_program);
     start_scanline_out(pio, sm, offset);
+
+    gpio_put(LED_PIN, true);
 
     while (true) {
         render_scanline();

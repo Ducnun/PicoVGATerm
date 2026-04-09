@@ -13,19 +13,36 @@
 // ------------ //
 
 #define scanline_out_wrap_target 0
-#define scanline_out_wrap 0
+#define scanline_out_wrap 17
 #define scanline_out_pio_version 0
 
 static const uint16_t scanline_out_program_instructions[] = {
             //     .wrap_target
-    0x6008, //  0: out    pins, 8
+    0x90a0, //  0: pull   block           side 1
+    0xb027, //  1: mov    x, osr          side 1
+    0x7008, //  2: out    pins, 8         side 1
+    0x1042, //  3: jmp    x--, 2          side 1
+    0x90a0, //  4: pull   block           side 1
+    0xb027, //  5: mov    x, osr          side 1
+    0xb042, //  6: nop                    side 1
+    0x1046, //  7: jmp    x--, 6          side 1
+    0x90a0, //  8: pull   block           side 1
+    0xb027, //  9: mov    x, osr          side 1
+    0xa042, // 10: nop                    side 0
+    0x004a, // 11: jmp    x--, 10         side 0
+    0xf001, // 12: set    pins, 1         side 1
+    0x90a0, // 13: pull   block           side 1
+    0xb027, // 14: mov    x, osr          side 1
+    0xb042, // 15: nop                    side 1
+    0x104f, // 16: jmp    x--, 15         side 1
+    0xd000, // 17: irq    nowait 0        side 1
             //     .wrap
 };
 
 #if !PICO_NO_HARDWARE
 static const struct pio_program scanline_out_program = {
     .instructions = scanline_out_program_instructions,
-    .length = 1,
+    .length = 18,
     .origin = -1,
     .pio_version = scanline_out_pio_version,
 #if PICO_PIO_VERSION > 0
@@ -36,6 +53,7 @@ static const struct pio_program scanline_out_program = {
 static inline pio_sm_config scanline_out_program_get_default_config(uint offset) {
     pio_sm_config c = pio_get_default_sm_config();
     sm_config_set_wrap(&c, offset + scanline_out_wrap_target, offset + scanline_out_wrap);
+    sm_config_set_sideset(&c, 1, false, false);
     return c;
 }
 #endif

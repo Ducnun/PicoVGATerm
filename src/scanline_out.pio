@@ -1,9 +1,42 @@
 .program scanline_out
+.side_set 1   ; bit0 = HSYNC
 
-; Program that handles the scanline outputs at pixel clock speeds
-; Autopull handles filling the TX FIFO when a threshold is met (8 bits)
-; This then pulls data from the DMA channel attached to the PIO SM
+; DMA pixel bytes go to SM FIFO
+; DMA constants (front porch, hsync, back porch) also go to FIFO
+; SM pulls constants into OSR and uses X register for loops
 
 .wrap_target
-    out pins, 8
+
+; --------------------- Visible pixels ---------------------
+pull block side 1           ; Pull 1 word (we only need 1 byte per out)
+mov x, osr side 1          ; X = number of visible pixels (640)
+pixel_loop:
+    out pins, 8 side 1
+    jmp x-- pixel_loop side 1
+
+; --------------------- Front porch ---------------------
+pull block side 1
+mov x, osr side 1
+fp_loop:
+    nop side 1
+    jmp x-- fp_loop side 1
+
+; --------------------- HSYNC ---------------------
+pull block side 1
+mov x, osr side 1
+hs_loop:
+    nop side 0        ; HSYNC low
+    jmp x-- hs_loop side 0
+set pins, 1 side 1    ; HSYNC high
+
+; --------------------- Back porch ---------------------
+pull block side 1
+mov x, osr side 1
+bp_loop:
+    nop side 1
+    jmp x-- bp_loop side 1
+
+; --------------------- Line IRQ ---------------------
+irq 0 side 1
+
 .wrap
