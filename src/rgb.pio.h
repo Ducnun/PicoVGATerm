@@ -13,7 +13,7 @@
 // --- //
 
 #define rgb_wrap_target 2
-#define rgb_wrap 6
+#define rgb_wrap 7
 #define rgb_pio_version 0
 
 static const uint16_t rgb_program_instructions[] = {
@@ -22,16 +22,17 @@ static const uint16_t rgb_program_instructions[] = {
             //     .wrap_target
     0xe000, //  2: set    pins, 0
     0xa022, //  3: mov    x, y
-    0x20c1, //  4: wait   1 irq, 1
-    0x6008, //  5: out    pins, 8
-    0x0045, //  6: jmp    x--, 5
+    0x23c1, //  4: wait   1 irq, 1               [3]
+    0x80a0, //  5: pull   block
+    0x6308, //  6: out    pins, 8                [3]
+    0x0045, //  7: jmp    x--, 5
             //     .wrap
 };
 
 #if !PICO_NO_HARDWARE
 static const struct pio_program rgb_program = {
     .instructions = rgb_program_instructions,
-    .length = 7,
+    .length = 8,
     .origin = -1,
     .pio_version = rgb_pio_version,
 #if PICO_PIO_VERSION > 0
@@ -52,10 +53,14 @@ static inline void rgb_program_init(PIO pio, uint sm, uint offset, uint pin, uin
     // longer FIFO to avoid bursty data
     sm_config_set_fifo_join (&c, PIO_FIFO_JOIN_TX) ;
     sm_config_set_clkdiv(&c, div) ;
-    // Set this pin's GPIO function (connect PIO to the pad)
-    for (int i = 0; i < 8; i++){
-        pio_gpio_init(pio, pin + i);
-    }
+    pio_gpio_init(pio, pin);
+    pio_gpio_init(pio, pin+1);
+    pio_gpio_init(pio, pin+2);
+    pio_gpio_init(pio, pin+3);
+    pio_gpio_init(pio, pin+4);
+    pio_gpio_init(pio, pin+5);
+    pio_gpio_init(pio, pin+6);
+    pio_gpio_init(pio, pin+7);
     pio_sm_set_consecutive_pindirs(pio, sm, pin, 8, true);
     pio_sm_init(pio, sm, offset, &c);
 }

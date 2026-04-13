@@ -21,7 +21,7 @@
 #define TXCOUNT         307200      // Total number of pixels (640x480)
 #define HSYNC_DIV       ((float)SYS_CLK_HZ / PIXEL_CLOCK)
 #define VSYNC_DIV       HSYNC_DIV
-#define RGB_DIV         1
+#define RGB_DIV         HSYNC_DIV / 5.0f
 
 // State machine division accross PIO block
 #define HSYNC_SM    0

@@ -1,11 +1,6 @@
 #include "vga.h"
 #include "hardware/pio.h"
 
-volatile uint32_t line_count = 0;
-uint scanline_dma_chan;
-uint const_dma_chan;
-
-uint8_t scanline[RGB_ACTIVE];               // 1 byte per pixel, RGB 3:3:2
 uint8_t* write_ptr = &framebuffer[0];
 
 // Initialize scanline output SM and DMA
@@ -28,11 +23,11 @@ void start_vga(PIO pio) {
     // Pixel data DMA channel
     // This is autopulled by the RGB state machine
     dma_channel_config c0 = dma_channel_get_default_config(rgb_data_channel);
-    channel_config_set_transfer_data_size(&c0, DMA_SIZE_8);              // 8-bit txfers
-    channel_config_set_read_increment(&c0, true);                        // yes read incrementing
-    channel_config_set_write_increment(&c0, false);                      // no write incrementing
-    channel_config_set_dreq(&c0, DREQ_PIO0_TX2) ;                        // DREQ_PIO0_TX2 pacing (FIFO)
-    channel_config_set_chain_to(&c0, rgb_conf_channel);                  // chain to other channel
+    channel_config_set_transfer_data_size(&c0, DMA_SIZE_8);             // 8-bit txfers
+    channel_config_set_read_increment(&c0, true);                       // yes read incrementing
+    channel_config_set_write_increment(&c0, false);                     // no write incrementing
+    channel_config_set_dreq(&c0, DREQ_PIO0_TX2) ;                       // DREQ_PIO0_TX2 pacing (FIFO)
+    channel_config_set_chain_to(&c0, rgb_conf_channel);                 // chain to other channel
 
     dma_channel_configure(
         rgb_data_channel,           // Channel to be configured
@@ -69,8 +64,8 @@ void start_vga(PIO pio) {
 }
 
 void render_test(){
-    const uint8_t color1 = 0b11100000; // red
-    const uint8_t color2 = 0b11111111;
+    const uint8_t color1 = 0b11111111; // red
+    const uint8_t color2 = 0b00000000;
 
     for (uint16_t y = 0; y < SCREEN_HEIGHT; y++) {
         for (uint16_t x = 0; x < SCREEN_WIDTH; x++) {
