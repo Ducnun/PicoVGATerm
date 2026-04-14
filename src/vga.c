@@ -14,7 +14,7 @@ void start_vga(PIO pio) {
     pio_sm_claim(pio, RGB_SM);
     hsync_program_init(pio, HSYNC_SM, hsync_offset, HSYNC_PIN, HSYNC_DIV);
     vsync_program_init(pio, VSYNC_SM, vsync_offset, VSYNC_PIN, VSYNC_DIV);
-    rgb_program_init(pio, RGB_SM, rgb_offset, RGB_BASE_PIN, RGB_DIV);
+    rgb_program_init(pio, RGB_SM, rgb_offset, 0, RGB_DIV);
 
     // Set up DMA channels
     int rgb_data_channel = dma_claim_unused_channel(true);
@@ -64,8 +64,8 @@ void start_vga(PIO pio) {
 }
 
 void render_test(){
-    const uint8_t color1 = 0b11111111; // red
-    const uint8_t color2 = 0b00000000;
+    const uint8_t color1 = 0b00000111;
+    const uint8_t color2 = 0b11111000;
 
     for (uint16_t y = 0; y < SCREEN_HEIGHT; y++) {
         for (uint16_t x = 0; x < SCREEN_WIDTH; x++) {

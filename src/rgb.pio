@@ -12,7 +12,7 @@ mov y, osr  ; We will pull pixel data into osr later so y is used as more perman
 set pins, 0     ; set pixels black during blanking
 mov x, y        ; Now we copy our permanent y storage into our counting register x
 
-wait 1 irq 1  [3]  ; We wait for a new active line signal from the vsync program
+wait 1 irq 1 [3]; We wait for a new active line signal from the vsync program
 
 ; Pull and output data for every pixel
 colorout:

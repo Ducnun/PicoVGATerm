@@ -15,6 +15,11 @@ int main() {
     // Setup scanline state machine
     start_vga(VGA_PIO);
 
+    // int pin = 2;
+    // gpio_init(pin);
+    // gpio_set_dir(pin, GPIO_OUT);
+    // gpio_put(pin, 1);
+
     gpio_put(LED_PIN, true);
     render_test();
 

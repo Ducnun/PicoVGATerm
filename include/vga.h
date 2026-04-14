@@ -18,7 +18,7 @@
 #define RGB_ACTIVE      639
 #define H_ACTIVE        655         // Active and front porch - 1
 #define V_ACTIVE        479         // Active -1
-#define TXCOUNT         307200      // Total number of pixels (640x480)
+#define TXCOUNT         SCREEN_WIDTH * SCREEN_HEIGHT
 #define HSYNC_DIV       ((float)SYS_CLK_HZ / PIXEL_CLOCK)
 #define VSYNC_DIV       HSYNC_DIV
 #define RGB_DIV         HSYNC_DIV / 5.0f

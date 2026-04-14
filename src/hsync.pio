@@ -21,8 +21,8 @@ pulse:
 
 backporch:
     set pins, 1 [31]    ; Back porch is high again
-    set pins, 1 [12]    ; 45 cycles in total now
-    irq 0       [1]     ; Set IRQ signal VSYNC to signal the end of a line,
+    set pins, 1 [11]     ; 45 cycles in total now
+    irq 0       [2]     ; Set IRQ signal VSYNC to signal the end of a line,
     ; This irq is preempted slightly so vsync can perform 2 instructions at the start
     ; of a new line, to check whether its active, and if so start the rgb output
 
