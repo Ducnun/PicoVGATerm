@@ -14,7 +14,7 @@
 #define SCREEN_HEIGHT   480
 
 // Definitions for signal generation
-#define PIXEL_CLOCK     25175000
+#define PIXEL_CLOCK     25000000
 #define RGB_ACTIVE      639
 #define H_ACTIVE        655         // Active and front porch - 1
 #define V_ACTIVE        479         // Active -1
