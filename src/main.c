@@ -21,9 +21,12 @@ int main() {
     // gpio_put(pin, 1);
 
     gpio_put(LED_PIN, true);
-    render_test();
 
+    render_hello_world();
+    
     while (true) {
         tight_loop_contents();
+        // render_animation();
+        // sleep_ms(100);s
     }
 }

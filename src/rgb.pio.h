@@ -13,26 +13,25 @@
 // --- //
 
 #define rgb_wrap_target 2
-#define rgb_wrap 7
+#define rgb_wrap 6
 #define rgb_pio_version 0
 
 static const uint16_t rgb_program_instructions[] = {
     0x80a0, //  0: pull   block
     0xa047, //  1: mov    y, osr
             //     .wrap_target
-    0xe000, //  2: set    pins, 0
-    0xa022, //  3: mov    x, y
-    0x23c1, //  4: wait   1 irq, 1               [3]
-    0x80a0, //  5: pull   block
-    0x6308, //  6: out    pins, 8                [3]
-    0x0045, //  7: jmp    x--, 5
+    0xa022, //  2: mov    x, y
+    0x23c1, //  3: wait   1 irq, 1               [3]
+    0x80a0, //  4: pull   block
+    0x6308, //  5: out    pins, 8                [3]
+    0x0044, //  6: jmp    x--, 4
             //     .wrap
 };
 
 #if !PICO_NO_HARDWARE
 static const struct pio_program rgb_program = {
     .instructions = rgb_program_instructions,
-    .length = 8,
+    .length = 7,
     .origin = -1,
     .pio_version = rgb_pio_version,
 #if PICO_PIO_VERSION > 0

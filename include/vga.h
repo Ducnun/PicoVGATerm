@@ -14,7 +14,7 @@
 #define SCREEN_HEIGHT   480
 
 // Definitions for signal generation
-#define PIXEL_CLOCK     25000000
+#define PIXEL_CLOCK     25175000
 #define RGB_ACTIVE      639
 #define H_ACTIVE        655         // Active and front porch - 1
 #define V_ACTIVE        479         // Active -1
@@ -33,14 +33,14 @@ uint8_t framebuffer[TXCOUNT];
 #ifndef CUSTOM_VGA_PINS
     #define HSYNC_PIN   15
     #define VSYNC_PIN   14
-    #define R_MSB_PIN   0
-    #define R_MID_PIN   1
-    #define R_LSB_PIN   2
-    #define G_MSB_PIN   3
-    #define G_MID_PIN   4
-    #define G_LSB_PIN   5
-    #define B_MSB_PIN   6
-    #define B_LSB_PIN   7
+    #define R_MSB_PIN   2
+    #define R_MID_PIN   3
+    #define R_LSB_PIN   4
+    #define G_MSB_PIN   5
+    #define G_MID_PIN   6
+    #define G_LSB_PIN   7
+    #define B_MSB_PIN   8
+    #define B_LSB_PIN   9
 #endif
 
 #define RGB_BASE_PIN    R_MSB_PIN
@@ -55,3 +55,10 @@ extern uint8_t scanline[RGB_ACTIVE];  // Visible + front porch + sync + back por
 */
 void start_vga(PIO pio);
 void render_test();
+void render_planes();
+void render_stripes();
+void render_explosion();
+void render_animation();
+void render_validation();
+void render_calibration();
+void render_hello_world();
