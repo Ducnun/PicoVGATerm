@@ -64,7 +64,8 @@ void start_vga(PIO pio) {
 
 framebuffer_t get_framebuffer(){
     framebuffer_t fb;
-    fb.data = framebuffer[0];
+    fb.data = &framebuffer[0];
     fb.height = SCREEN_HEIGHT;
     fb.width = SCREEN_WIDTH;
+    return fb;
 }

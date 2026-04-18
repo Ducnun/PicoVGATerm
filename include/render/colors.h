@@ -7,7 +7,7 @@ typedef enum{
     WHITE,
 }color_t;
 
-static const uint8_t color_lut[]{
+static const uint8_t color_lut[] = {
     0x00,
     0xff,
 };
