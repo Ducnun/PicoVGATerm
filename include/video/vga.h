@@ -5,9 +5,9 @@
 #include "hardware/clocks.h"
 #include "hardware/dma.h"
 
-#include "hsync.pio.h"
-#include "vsync.pio.h"
-#include "rgb.pio.h"
+#include "video/hsync.pio.h"
+#include "video/vsync.pio.h"
+#include "video/rgb.pio.h"
 
 // Definitions for rendering
 #define SCREEN_WIDTH    640

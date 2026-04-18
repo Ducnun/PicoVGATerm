@@ -1,5 +1,5 @@
 #include "hardware/pio.h"
-#include "vga.h"
+#include "video/vga.h"
 
 #define VGA_PIO pio0
 
