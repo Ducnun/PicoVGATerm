@@ -1,9 +1,0 @@
-.program scanline_out
-
-; Program that handles the scanline outputs at pixel clock speeds
-; Autopull handles filling the TX FIFO when a threshold is met (8 bits)
-; This then pulls data from the DMA channel attached to the PIO SM
-
-.wrap_target
-    out pins, 8
-.wrap

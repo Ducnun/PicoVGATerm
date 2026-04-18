@@ -1,9 +1,46 @@
 .program hsync
 
+; PIO program that generates the HSYNC signal and drives all other state machines
+; This clock should be the one source of truth. Everything else is syncrhonised with
+; it using the interrupts between state machines. This thus needs to run at pixel clock
+
+pull block  ; Pull once as delay for active field is too high for a normal nop
+
 .wrap_target
-    set pins, 0 [19]
-    nop [31]
-    set pins, 1 [2]
-    nop [2]
-    irq 0       ; Generates interrupt for both line increment and the scanline pio
+mov x, osr  ; Copy value we just pulled to OSR into scratch register x
+
+; Active porch is a combination of active RGB signal and the front porch
+activeporch:
+    jmp x-- activeporch     ; Essentially a nop for OSRs original value
+
+; Fall through to sync pulse (logical low)
+pulse:
+    set pins, 0 [31]    ; First 32 cycles of low
+    set pins, 0 [31]    ; Second 32 cycles of low
+    set pins, 0 [31]    ; Last 32 for total of 96 low cycles
+
+backporch:
+    set pins, 1 [31]    ; Back porch is high again
+    set pins, 1 [11]     ; 45 cycles in total now
+    irq 0       [2]     ; Set IRQ signal VSYNC to signal the end of a line,
+    ; This irq is preempted slightly so vsync can perform 2 instructions at the start
+    ; of a new line, to check whether its active, and if so start the rgb output
+
+    ; THis is now 47 cycles out of 48. The last is the mov x, osr instruction at the
+    ; start of the program for a full 48 cycle back porch
+
 .wrap
+
+
+; Define a standard configuration
+% c-sdk {
+static inline void hsync_program_init(PIO pio, uint sm, uint offset, uint pin, uint8_t div){
+    // Create state machine configuration
+    pio_sm_config c = hsync_program_get_default_config(offset);
+    sm_config_set_set_pins(&c, pin, 1);
+    sm_config_set_clkdiv(&c, div) ;
+    pio_gpio_init(pio, pin);
+    pio_sm_set_consecutive_pindirs(pio, sm, pin, 1, true);
+    pio_sm_init(pio, sm, offset, &c);
+}
+%}

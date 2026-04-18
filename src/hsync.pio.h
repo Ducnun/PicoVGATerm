@@ -12,24 +12,28 @@
 // hsync //
 // ----- //
 
-#define hsync_wrap_target 0
-#define hsync_wrap 4
+#define hsync_wrap_target 1
+#define hsync_wrap 8
 #define hsync_pio_version 0
 
 static const uint16_t hsync_program_instructions[] = {
+    0x80a0, //  0: pull   block
             //     .wrap_target
-    0xf300, //  0: set    pins, 0                [19]
-    0xbf42, //  1: nop                           [31]
-    0xe201, //  2: set    pins, 1                [2]
-    0xa242, //  3: nop                           [2]
-    0xc000, //  4: irq    nowait 0
+    0xa027, //  1: mov    x, osr
+    0x0042, //  2: jmp    x--, 2
+    0xff00, //  3: set    pins, 0                [31]
+    0xff00, //  4: set    pins, 0                [31]
+    0xff00, //  5: set    pins, 0                [31]
+    0xff01, //  6: set    pins, 1                [31]
+    0xeb01, //  7: set    pins, 1                [11]
+    0xc200, //  8: irq    nowait 0               [2]
             //     .wrap
 };
 
 #if !PICO_NO_HARDWARE
 static const struct pio_program hsync_program = {
     .instructions = hsync_program_instructions,
-    .length = 5,
+    .length = 9,
     .origin = -1,
     .pio_version = hsync_pio_version,
 #if PICO_PIO_VERSION > 0
@@ -42,5 +46,16 @@ static inline pio_sm_config hsync_program_get_default_config(uint offset) {
     sm_config_set_wrap(&c, offset + hsync_wrap_target, offset + hsync_wrap);
     return c;
 }
+
+static inline void hsync_program_init(PIO pio, uint sm, uint offset, uint pin, uint8_t div){
+    // Create state machine configuration
+    pio_sm_config c = hsync_program_get_default_config(offset);
+    sm_config_set_set_pins(&c, pin, 1);
+    sm_config_set_clkdiv(&c, div) ;
+    pio_gpio_init(pio, pin);
+    pio_sm_set_consecutive_pindirs(pio, sm, pin, 1, true);
+    pio_sm_init(pio, sm, offset, &c);
+}
+
 #endif
 

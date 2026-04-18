@@ -1,109 +1,286 @@
 #include "vga.h"
+#include "hardware/pio.h"
 
-volatile uint32_t line_count = 0;
-volatile uint8_t scanline[800] = {0};
-uint scanline_dma_channel;
+uint8_t* write_ptr = &framebuffer[0];
 
-void start_hsync(PIO pio, uint sm, uint offset){
-    pio_sm_config c = hsync_program_get_default_config(offset);
+// Initialize scanline output SM and DMA
+void start_vga(PIO pio) {
+    // Get the 3 state machines configured with their defaults provided through PIOASM
+    uint hsync_offset = pio_add_program(pio, &hsync_program);
+    uint vsync_offset = pio_add_program(pio, &vsync_program);
+    uint rgb_offset = pio_add_program(pio, &rgb_program);
+    pio_sm_claim(pio, HSYNC_SM);
+    pio_sm_claim(pio, VSYNC_SM);
+    pio_sm_claim(pio, RGB_SM);
+    hsync_program_init(pio, HSYNC_SM, hsync_offset, HSYNC_PIN, HSYNC_DIV);
+    vsync_program_init(pio, VSYNC_SM, vsync_offset, VSYNC_PIN, VSYNC_DIV);
+    rgb_program_init(pio, RGB_SM, rgb_offset, RGB_BASE_PIN, RGB_DIV);
 
-    // Calculate and set clock divider
-    float hfreq = timing->vfreq * timing->total_lines;
-    float div = (float)clock_get_hz(clk_sys) / hfreq / HSYNC_INSTR_LEN;
-    sm_config_set_clkdiv(&c, div);
+    // Set up DMA channels
+    int rgb_data_channel = dma_claim_unused_channel(true);
+    int rgb_conf_channel = dma_claim_unused_channel(true);
 
-    // Allow PIO to control gpio pin
-    pio_gpio_init(pio, HSYNC_PIN);
-    pio_sm_set_consecutive_pindirs(pio, sm, HSYNC_PIN, 1, true);
-    sm_config_set_set_pins(&c, HSYNC_PIN, 1);
-
-    // Load config and start
-    pio_sm_init(pio, sm, offset, &c);
-    pio_sm_set_enabled(pio, sm, true);
-}
-
-void start_scanline_out(PIO pio, uint sm, uint offset){
-    // Prefill the back end with black pixels, allows dumb pixel streaming
-    for(int i = 640; i < 800; i++){
-        scanline[i] = 0x00;
-    }
-    
-    pio_sm_config c = scanline_out_program_get_default_config(offset);
-
-    // Calculate and set clock divider
-    float pixel_clock = timing->total_columns * timing->total_lines * timing->vfreq;
-    float div = (float)clock_get_hz(clk_sys) / pixel_clock / SCANLINE_INSTR_LEN;
-    sm_config_set_clkdiv(&c, div);
-
-    // Bind pins to state machine
-    for(int i = R_MSB_PIN; i < R_MSB_PIN + 8; i++) pio_gpio_init(pio, i);
-    sm_config_set_out_pins(&c, R_MSB_PIN, 8);
-    pio_sm_set_consecutive_pindirs(pio, sm, R_MSB_PIN, 8, true);
-    
-    // Set shift register to autopull every 8 bits
-    sm_config_set_out_shift(&c, true, true, 8);
-
-    // Setup DMA channel to feed SM FIFO with scanline data
-    scanline_dma_channel = dma_claim_unused_channel(true);
-    dma_channel_config cfg = dma_channel_get_default_config(scanline_dma_channel);
-    channel_config_set_transfer_data_size(&cfg, DMA_SIZE_8);
-    channel_config_set_read_increment(&cfg, true);
-    channel_config_set_write_increment(&cfg, false);
-
-    // Allow state machine to request DMA start
-    channel_config_set_dreq(&cfg, pio_get_dreq(pio, sm, true));
+    // Pixel data DMA channel
+    dma_channel_config c0 = dma_channel_get_default_config(rgb_data_channel);
+    channel_config_set_transfer_data_size(&c0, DMA_SIZE_8);             // 8-bit txfers
+    channel_config_set_read_increment(&c0, true);                       // yes read incrementing
+    channel_config_set_write_increment(&c0, false);                     // no write incrementing
+    channel_config_set_dreq(&c0, DREQ_PIO0_TX2) ;                       // DREQ_PIO0_TX2 pacing (FIFO)
+    channel_config_set_chain_to(&c0, rgb_conf_channel);                 // chain to other channel
 
     dma_channel_configure(
-        scanline_dma_channel,
-        &cfg,
-        &pio->txf[sm],   // destination
-        scanline,        // source
-        800,             // bytes
-        false            // Let HSYNC IRQ start DMA stream
+        rgb_data_channel,           // Channel to be configured
+        &c0,                        // The configuration we just created
+        &pio->txf[RGB_SM],          // write address (RGB PIO TX FIFO)
+        &framebuffer,               // The initial read address (pixel color array)
+        TXCOUNT,                    // Number of transfers (per byte)
+        false                       // Don't start immediately
     );
 
-    // After full setup, start the state machine
-    pio_sm_init(pio, sm, offset, &c);
-    pio_sm_set_enabled(pio, sm, true);
+    dma_channel_config c1 = dma_channel_get_default_config(rgb_conf_channel);
+    channel_config_set_transfer_data_size(&c1, DMA_SIZE_32);        // 32 bit transfers (ptr on 32 bit system)
+    channel_config_set_read_increment(&c1, false);                  // Keep read stable
+    channel_config_set_write_increment(&c1, false);                 // Keep write stable too
+    channel_config_set_chain_to(&c1, rgb_data_channel);             // Chain to other channel
+
+    dma_channel_configure(
+        rgb_conf_channel,       // Channel to be configured
+        &c1,                    // Partial configuration created earlier
+        &dma_hw->ch[rgb_data_channel].read_addr,    // Write address is start of data dma channel
+        &write_ptr,             // Read address
+        1,                      // only 1 transfer everytime this dma channel is started
+        false                   // Don't start immediately
+    );
+
+    // Set them blocking and give the state machines the values they need for their large counters
+    pio_sm_put_blocking(pio, HSYNC_SM, H_ACTIVE);
+    pio_sm_put_blocking(pio, VSYNC_SM, V_ACTIVE);
+    pio_sm_put_blocking(pio, RGB_SM, RGB_ACTIVE);
+
+    // Now we start all state machines simultaneously
+    pio_enable_sm_mask_in_sync(pio, ((1u << HSYNC_SM) | (1u << VSYNC_SM) | (1u << RGB_SM)));
+    dma_channel_start(rgb_data_channel);
 }
 
-void __isr hsync_irq_handler(){
-    dma_channel_set_read_addr(scanline_dma_channel, scanline, true);
-    
-    pio_interrupt_clear(pio0, 0);  // clear IRQ 0
-    line_count++;
+void render_test() {
+    for (uint16_t y = 0; y < SCREEN_HEIGHT; y++) {
+        for (uint16_t x = 0; x < SCREEN_WIDTH; x++) {
 
-    if (line_count == timing->vsync_start) {
-        gpio_put(VSYNC_PIN, 0);   // start VSYNC pulse (active low)
-    }
-    else if (line_count == timing->vsync_end) {
-        gpio_put(VSYNC_PIN, 1);   // end VSYNC pulse
-    }
-    else if (line_count >= timing->total_lines) {
-        line_count = 0;
+            uint8_t r = x & 0x07;                 // 3-bit red gradient
+            uint8_t g = y & 0x07;                 // 3-bit green gradient
+            uint8_t b = (x + y) & 0x07;           // diagonal blue variation
+
+            framebuffer[y * SCREEN_WIDTH + x] =
+                (g << 5) | (r << 2) | (b >> 1);   // adjust to your bit layout
+        }
     }
 }
 
-void start_vsync_hook(){
-    gpio_init(VSYNC_PIN);
-    gpio_set_dir(VSYNC_PIN, GPIO_OUT);
-    gpio_put(VSYNC_PIN, 1);
-    irq_set_exclusive_handler(PIO0_IRQ_0, hsync_irq_handler);
-    irq_set_enabled(PIO0_IRQ_0, true);
-    line_count = 0;     // Explicit reset
-    pio_set_irq0_source_enabled(pio0, pis_interrupt0, true);
+void render_stripes(){
+    for (uint16_t y = 0; y < SCREEN_HEIGHT; y++) {
+        for (uint16_t x = 0; x < SCREEN_WIDTH; x++) {
+
+            uint8_t r = (x / 8) & 0x07;   // vertical red bands
+            uint8_t g = (y / 8) & 0x07;   // horizontal green bands
+            uint8_t b = ((x ^ y) / 8) & 0x07;
+
+            framebuffer[y * SCREEN_WIDTH + x] =
+                (g << 5) | (r << 2) | b;
+        }
+    }
 }
 
-// Hardcoding everything for now at native resolution
-void render_scanline(){
+void render_planes() {
+    static uint8_t bit = 0;
+    bit = (bit + 1) & 7;
 
-    uint16_t y = line_count;
+    for (uint16_t y = 0; y < SCREEN_HEIGHT; y++) {
+        for (uint16_t x = 0; x < SCREEN_WIDTH; x++) {
 
-    for(uint16_t x = 0; x < 640; x++)
-    {
-        if(((x >> 3) ^ (y >> 3)) & 1)
-            scanline[x] = 0b00000111;
-        else
-            scanline[x] = 0b11111111;
+            uint8_t value = (x == y) ? (1 << bit) : 0;
+
+            framebuffer[y * SCREEN_WIDTH + x] = value;
+        }
+    }
+}
+
+void render_explosion() {
+    for (uint16_t y = 0; y < SCREEN_HEIGHT; y++) {
+        for (uint16_t x = 0; x < SCREEN_WIDTH; x++) {
+
+            uint8_t v = 0;
+
+            if ((x & 1)) v |= 0x01;
+            if ((x & 2)) v |= 0x02;
+            if ((x & 4)) v |= 0x04;
+
+            framebuffer[y * SCREEN_WIDTH + x] = v;
+        }
+    }
+}
+
+void render_animation() {
+    static uint16_t t = 0;
+    t++;
+
+    for (uint16_t y = 0; y < SCREEN_HEIGHT; y++) {
+        for (uint16_t x = 0; x < SCREEN_WIDTH; x++) {
+
+            int16_t cx = x - (SCREEN_WIDTH / 2);
+            int16_t cy = y - (SCREEN_HEIGHT / 2);
+
+            uint16_t dist = (cx * cx + cy * cy) >> 8;
+
+            uint8_t r = (dist + t) & 0x07;
+            uint8_t g = ((dist >> 1) + (t >> 1)) & 0x07;
+            uint8_t b = ((dist >> 2) + (t >> 2)) & 0x07;
+
+            framebuffer[y * SCREEN_WIDTH + x] =
+                (g << 5) | (r << 2) | b;
+        }
+    }
+}
+
+void render_validation() {
+    for (uint16_t y = 0; y < SCREEN_HEIGHT; y++) {
+        uint8_t bit = (y / 20) & 7;  // each horizontal band = one bit
+
+        for (uint16_t x = 0; x < SCREEN_WIDTH; x++) {
+
+            uint8_t value;
+
+            // alternating stripes to make it obvious
+            if ((x / 16) & 1)
+                value = (1 << bit);
+            else
+                value = 0;
+
+            framebuffer[y * SCREEN_WIDTH + x] = value;
+        }
+    }
+}
+
+void render_calibration() {
+    for (uint16_t y = 0; y < SCREEN_HEIGHT; y++) {
+        for (uint16_t x = 0; x < SCREEN_WIDTH; x++) {
+
+            uint8_t color = 0;
+
+            // --- Top: grayscale gradient ---
+            if (y < SCREEN_HEIGHT / 4) {
+                uint8_t v = (x * 8) / SCREEN_WIDTH; // 0–7
+                color = (v << 5) | (v << 2) | v;
+            }
+
+            // --- Second: RGB bars ---
+            else if (y < SCREEN_HEIGHT / 2) {
+                uint8_t section = (x * 3) / SCREEN_WIDTH;
+
+                if (section == 0) color = 0b00000111;       // Blue
+                else if (section == 1) color = 0b00011100;  // Red
+                else color = 0b11100000;                    // Green
+            }
+
+            // --- Third: color gradient mix ---
+            else if (y < 3 * SCREEN_HEIGHT / 4) {
+                uint8_t r = (x * 8) / SCREEN_WIDTH;
+                uint8_t g = (y * 8) / SCREEN_HEIGHT;
+                uint8_t b = ((x + y) * 8) / (SCREEN_WIDTH + SCREEN_HEIGHT);
+
+                color = (g << 5) | (r << 2) | b;
+            }
+
+            // --- Bottom: checker contrast test ---
+            else {
+                uint8_t cell = ((x / 16) ^ (y / 16)) & 1;
+                color = cell ? 0xFF : 0x00;
+            }
+
+            framebuffer[y * SCREEN_WIDTH + x] = color;
+        }
+    }
+}
+
+// 5x7 font for required characters (H, E, L, O, W, R, D, space)
+static const uint8_t font[8][7] = {
+    // H
+    {0x11,0x11,0x1F,0x11,0x11,0x11,0x11},
+    // E
+    {0x1F,0x10,0x1E,0x10,0x10,0x10,0x1F},
+    // L
+    {0x10,0x10,0x10,0x10,0x10,0x10,0x1F},
+    // O
+    {0x0E,0x11,0x11,0x11,0x11,0x11,0x0E},
+    // W
+    {0x11,0x11,0x11,0x15,0x15,0x15,0x0A},
+    // R
+    {0x1E,0x11,0x11,0x1E,0x14,0x12,0x11},
+    // D
+    {0x1E,0x11,0x11,0x11,0x11,0x11,0x1E},
+    // space
+    {0x00,0x00,0x00,0x00,0x00,0x00,0x00}
+};
+
+enum {
+    FONT_H, FONT_E, FONT_L, FONT_O,
+    FONT_W, FONT_R, FONT_D, FONT_SPACE
+};
+
+const uint8_t text[] = {
+    FONT_H, FONT_E, FONT_L, FONT_L, FONT_O,
+    FONT_SPACE,
+    FONT_W, FONT_O, FONT_R, FONT_L, FONT_D
+};
+
+void render_hello_world() {
+    // --- clear screen ---
+    for (int i = 0; i < SCREEN_WIDTH * SCREEN_HEIGHT; i++) {
+        framebuffer[i] = 0x00;
+    }
+
+    int start_x = 20;
+    int start_y = 40;
+
+    // 8 different colors (cycle through all bits)
+    uint8_t colors[8] = {
+        0b00000111, // RED
+        0b00011100, // GREEN
+        0b11100000, // BLUE
+        0b00011111, // cyan-ish
+        0b11100111, // yellow-ish
+        0b11111100, // magenta-ish
+        0b10101010, // mixed pattern
+        0b11111111  // white
+    };
+
+    for (int c = 0; c < sizeof(text); c++) {
+        int char_x = start_x + c * 12; // wider spacing for background
+        int char_y = start_y;
+
+        uint8_t bg = colors[c % 8];
+
+        // --- draw background cell (10x10 block) ---
+        for (int dy = 0; dy < 10; dy++) {
+            for (int dx = 0; dx < 10; dx++) {
+                int x = char_x + dx;
+                int y = char_y + dy;
+
+                framebuffer[y * SCREEN_WIDTH + x] = bg;
+            }
+        }
+
+        // --- draw character on top ---
+        for (int row = 0; row < 7; row++) {
+            uint8_t bits = font[text[c]][row];
+
+            for (int col = 0; col < 5; col++) {
+                if (bits & (1 << (4 - col))) {
+                    int x = char_x + 2 + col; // center inside cell
+                    int y = char_y + 1 + row;
+
+                    framebuffer[y * SCREEN_WIDTH + x] = 0xFF; // white text
+                }
+            }
+        }
     }
 }

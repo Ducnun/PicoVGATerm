@@ -1,0 +1,52 @@
+.program vsync
+.side_set 1 opt
+
+pull block  ; Pull once as delay for active field is to high for a normal nop
+
+.wrap_target
+
+mov x, osr  ; Copy value from OSR into x, will act as delay ops in the future
+
+; First we wait for the hsync state machine to signal the end of a line
+; While we are in active, we generate a second interrupt for the RGB state machine
+; to output pixel data. If not, we fall through to the sync pulse
+activefront: 
+    wait 1 irq 0
+    irq 1
+    jmp x-- activefront
+
+; Now we wait 9 additional line signals to generate the vsync signal
+set y, 9
+frontporch:
+    wait 1 irq 0
+    jmp y-- frontporch
+
+; Sync pulse
+set pins, 0     ; Set pin low and wait 2 more lines
+wait 1 irq 0
+wait 1 irq 0
+
+; BACKPORCH
+set y, 31       ; First instruction, then we jmp 31 times for 32 times in this block
+backporch:
+    wait 1 irq 0  side 1
+    jmp y-- backporch
+
+; we wrap around and perform a mov instruction for the 33rd line of the backporch
+.wrap
+
+
+; Define a default configuration
+% c-sdk{
+static inline void vsync_program_init(PIO pio, uint sm, uint offset, uint pin, uint8_t div){
+    // Create state machine configuration
+    pio_sm_config c = vsync_program_get_default_config(offset);
+    sm_config_set_set_pins(&c, pin, 1);
+    sm_config_set_clkdiv(&c, div) ;
+    sm_config_set_sideset_pins(&c, pin);
+    pio_gpio_init(pio, pin);
+    pio_sm_set_consecutive_pindirs(pio, sm, pin, 1, true);
+    pio_sm_init(pio, sm, offset, &c);
+}
+%}
+
