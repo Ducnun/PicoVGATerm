@@ -8,6 +8,7 @@
 #include "video/hsync.pio.h"
 #include "video/vsync.pio.h"
 #include "video/rgb.pio.h"
+#include "video/framebuffer.h"
 
 // Definitions for rendering
 #define SCREEN_WIDTH    640
@@ -45,20 +46,11 @@ uint8_t framebuffer[TXCOUNT];
 
 #define RGB_BASE_PIN    R_MSB_PIN
 
-volatile extern uint32_t line_count;
-extern uint8_t scanline[RGB_ACTIVE];  // Visible + front porch + sync + back porch
-
 /*
     @brief Takes the entire PIO block (needs 3 of the 4 state machines) and combines them
     to make a full VGA signal
     @param pio block used for signal generation
 */
 void start_vga(PIO pio);
-void render_test();
-void render_planes();
-void render_stripes();
-void render_explosion();
-void render_animation();
-void render_validation();
-void render_calibration();
-void render_hello_world();
+
+framebuffer_t get_framebuffer(void);
