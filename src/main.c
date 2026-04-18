@@ -3,6 +3,7 @@
 #include "render/renderer.h"
 
 #define VGA_PIO pio0
+#define LEFT_PAD 16
 
 int main() {
     stdio_init_all();
@@ -11,17 +12,17 @@ int main() {
     start_vga(VGA_PIO);
 
     framebuffer_t fb = get_framebuffer();
-    draw_char(fb, 0, 0, 'H', WHITE, BLACK);
-    draw_char(fb, 8, 0, 'E', WHITE, BLACK);
-    draw_char(fb, 16, 0, 'L', WHITE, BLACK);
-    draw_char(fb, 24, 0, 'L', WHITE, BLACK);
-    draw_char(fb, 32, 0, 'O', WHITE, BLACK);
-    draw_char(fb, 48, 0, 'W', WHITE, BLACK);
-    draw_char(fb, 56, 0, 'O', WHITE, BLACK);
-    draw_char(fb, 64, 0, 'R', WHITE, BLACK);
-    draw_char(fb, 72, 0, 'L', WHITE, BLACK);
-    draw_char(fb, 80, 0, 'D', WHITE, BLACK);
-    draw_char(fb, 88, 0, '!', WHITE, BLACK);
+    draw_char(fb, LEFT_PAD + 0, 0, 'H', WHITE, BLACK);
+    draw_char(fb, LEFT_PAD + 8, 0, 'e', WHITE, BLACK);
+    draw_char(fb, LEFT_PAD + 16, 0, 'l', WHITE, BLACK);
+    draw_char(fb, LEFT_PAD + 24, 0, 'l', WHITE, BLACK);
+    draw_char(fb, LEFT_PAD + 32, 0, 'o', WHITE, BLACK);
+    draw_char(fb, LEFT_PAD + 48, 0, 'W', WHITE, BLACK);
+    draw_char(fb, LEFT_PAD + 56, 0, 'o', WHITE, BLACK);
+    draw_char(fb, LEFT_PAD + 64, 0, 'r', WHITE, BLACK);
+    draw_char(fb, LEFT_PAD + 72, 0, 'l', WHITE, BLACK);
+    draw_char(fb, LEFT_PAD + 80, 0, 'd', WHITE, BLACK);
+    draw_char(fb, LEFT_PAD + 88, 0, '!', WHITE, BLACK);
 
     while (true) {
         tight_loop_contents();

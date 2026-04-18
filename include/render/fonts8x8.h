@@ -104,5 +104,5 @@ static const uint8_t FONT_COMPUTER_BITMAP[] = {
 
 static inline const uint8_t* font_get_glyph(char c) {
     if (c < 32 || c > 127) c = '?';
-    return &FONT_COMPUTER_BITMAP[(uint8_t)c * 8];
+    return &FONT_COMPUTER_BITMAP[((uint8_t)c - 32) * 8];
 }
