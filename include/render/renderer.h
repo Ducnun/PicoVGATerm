@@ -3,6 +3,7 @@
 #include "video/framebuffer.h"
 #include "render/fonts8x8.h"
 #include "render/colors.h"
+#include "terminal/terminal.h"
 
 /**
  * @brief Draws a char at the desired location in the given framebuffer struct

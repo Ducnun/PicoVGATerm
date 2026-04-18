@@ -9,6 +9,7 @@ screenbuffer_t get_screenbuffer(){
     buffer.cells = &screencells[0];
     buffer.rows = TERMINAL_ROWS;
     buffer.cols = TERMINAL_COLS;
+    return buffer;
 }
 
 void set_default_fg(color_t color){
