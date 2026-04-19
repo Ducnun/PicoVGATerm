@@ -10,15 +10,15 @@ void draw_fps(framebuffer_t fb, int fps) {
     int y = 8;
 
     // Optional: draw "FPS:"
-    draw_char(fb, x, y, 'F', WHITE, BLACK); x += 8;
-    draw_char(fb, x, y, 'P', WHITE, BLACK); x += 8;
-    draw_char(fb, x, y, 'S', WHITE, BLACK); x += 8;
-    draw_char(fb, x, y, ':', WHITE, BLACK); x += 8;
-    draw_char(fb, x, y, ' ', WHITE, BLACK); x += 8;
+    draw_char(fb, x, y, 'F', RED, WHITE); x += 8;
+    draw_char(fb, x, y, 'P', RED, WHITE); x += 8;
+    draw_char(fb, x, y, 'S', RED, WHITE); x += 8;
+    draw_char(fb, x, y, ':', RED, WHITE); x += 8;
+    draw_char(fb, x, y, ' ', RED, WHITE); x += 8;
 
     // Handle 0 explicitly
     if (fps == 0) {
-        draw_char(fb, x, y, '0', WHITE, BLACK);
+        draw_char(fb, x, y, '0', RED, WHITE);
         return;
     }
 
@@ -33,7 +33,7 @@ void draw_fps(framebuffer_t fb, int fps) {
 
     // Draw in correct order
     for (int i = count - 1; i >= 0; i--) {
-        draw_char(fb, x, y, digits[i], WHITE, BLACK);
+        draw_char(fb, x, y, digits[i], RED, WHITE);
         x += 8;
     }
 }
@@ -71,32 +71,28 @@ int main() {
     // Setup VGA video signal generation
     start_vga(VGA_PIO);
 
-    framebuffer_t fb = get_framebuffer();
-
     uint8_t t = 0;
+    set_default_bg(BLUE);
+    set_default_fg(VIOLET);
 
     // Just draws garbage to all cells using draw char with iterated values
     while (true) {
         char ch = 33 + (t & 31);   // slowly cycle characters
-        color_t color = t & 7;
-        color_t bg_color = (t >> 3) & 7;
+        // Now inserting in the screenbuffer instead
+        for (int x = 0; x < TERMINAL_COLS; x += 1) {
+            for (int y = 0; y < TERMINAL_ROWS; y += 1) {
 
-        for (int y = 30; y < fb.height; y += 9) {
-            for (int x = 10; x < fb.width; x += 9) {
-
-                draw_char(fb, x, y, ch, color, bg_color);
+                set_char(x, y, ch);
 
                 ch++;
                 if (ch >= 33 + 96) ch = 33;
-
-                color++;
-                bg_color++;
-
-                if (color >= 8) color = 0;
-                if (bg_color >= 8) bg_color = 0;
             }
         }
-        fps_update(fb); // Track FPS ON SCREEN!!
+
+        framebuffer_t fb = get_framebuffer();
+        render_terminal(fb);
+        // fps_update(fb); // Track FPS ON SCREEN!!
+        sleep_ms(1000);
 
         t++;  // drives animation
     }

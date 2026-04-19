@@ -30,6 +30,16 @@ void set_char(uint16_t px, uint16_t py, char c){
     cell->flags |= CELL_FLAG_DIRTY;
 }
 
+void set_char_c(uint16_t px, uint16_t py, char c, color_t fg, color_t bg){
+    if (px >= TERMINAL_COLS || py >= TERMINAL_ROWS) return;
+
+    terminal_cell_t* cell = &screencells[py * TERMINAL_COLS + px];
+    cell->c = c;
+    cell->fg = fg;
+    cell->bg = bg;
+    cell->flags |= CELL_FLAG_DIRTY;
+}
+
 void rm_char(uint16_t px, uint16_t py){
     if (px >= TERMINAL_COLS || py >= TERMINAL_ROWS) return;
 

@@ -15,4 +15,4 @@
  * @param bg Background color of the cell
  */
 void draw_char(framebuffer_t fb, int px, int py, char c, color_t fg, color_t bg);
-void render_terminal();
+void render_terminal(framebuffer_t);
