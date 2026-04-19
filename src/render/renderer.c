@@ -1,7 +1,7 @@
 #include "render/renderer.h"
 
 void draw_char(framebuffer_t fb, int px, int py, char c, color_t fg, color_t bg) {
-    if (px < 0 || py < 0 || px + 8 > fb.width || py + 8 > fb.height) return;
+    if (px < 0 || py < 0 || px + FONT->width > fb.width || py + FONT->height > fb.height) return;
 
     const uint8_t* glyph = font_get_glyph(c);
 
@@ -12,19 +12,21 @@ void draw_char(framebuffer_t fb, int px, int py, char c, color_t fg, color_t bg)
         uint8_t bits = glyph[row];
         uint8_t* dst = &fb.data[(py + row) * fb.width + px];
 
-        for (int col = 0; col < FONT->height; col++) {
+        for (int col = 0; col < FONT->width; col++) {
             dst[col] = (bits & (1 << (7 - col))) ? fg_val : bg_val;
         }
     }
 }
 
-static inline void draw_cell(framebuffer_t fb, uint8_t px, uint8_t py, terminal_cell_t* cell){
+static inline void draw_cell(framebuffer_t fb, uint8_t col, uint8_t row, terminal_cell_t* cell){
     const uint8_t* glyph = font_get_glyph(cell->c);
+    uint16_t px = col * FONT->width;
+    uint16_t py = row * FONT->height;
     for (int row = 0; row < FONT->height; row++) {
         uint8_t bits = glyph[row];
         uint8_t* dst = &fb.data[(py + row) * fb.width + px];
 
-        for (int col = 0; col < FONT->height; col++) {
+        for (int col = 0; col < FONT->width; col++) {
             dst[col] = (bits & (1 << (7 - col))) ? cell->fg : cell->bg;
         }
     }
@@ -35,7 +37,16 @@ void render_terminal(framebuffer_t fb){
     for (int cur_row = 0; cur_row < buffer.rows; cur_row++){
         for (int cur_col = 0; cur_col < buffer.cols; cur_col++){
             terminal_cell_t* cell = &buffer.cells[cur_row * buffer.cols + cur_col];
-            if (cell->flags && CELL_FLAG_DIRTY) draw_cell(fb, cur_row * FONT->height, cur_col * FONT->width, cell);   // only render changed cells
+
+            // only render changed cells
+            if (cell->flags & CELL_FLAG_DIRTY) {
+                draw_cell(fb, 
+                    cur_col, 
+                    cur_row, 
+                    cell);   
+
+                cell->flags &= ~CELL_FLAG_DIRTY;
+            }
         }
     }
 }

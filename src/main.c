@@ -65,35 +65,36 @@ void fps_update(framebuffer_t fb) {
     draw_fps(fb, current_fps);
 }
 
+void fill_terminal(){
+    char ch = 33;   // slowly cycle characters
+    for (int y = 0; y < TERMINAL_ROWS; y++) {
+        for (int x = 0; x < TERMINAL_COLS; x++) {
+
+            set_char(x, y, ch);
+
+            ch++;
+            if (ch >= 33 + 96) ch = 33;
+        }
+    }
+}
+
 int main() {
     stdio_init_all();
 
     // Setup VGA video signal generation
     start_vga(VGA_PIO);
 
-    uint8_t t = 0;
     set_default_bg(BLUE);
     set_default_fg(VIOLET);
+    fill_terminal();
 
     // Just draws garbage to all cells using draw char with iterated values
     while (true) {
-        char ch = 33 + (t & 31);   // slowly cycle characters
         // Now inserting in the screenbuffer instead
-        for (int x = 0; x < TERMINAL_COLS; x += 1) {
-            for (int y = 0; y < TERMINAL_ROWS; y += 1) {
-
-                set_char(x, y, ch);
-
-                ch++;
-                if (ch >= 33 + 96) ch = 33;
-            }
-        }
 
         framebuffer_t fb = get_framebuffer();
         render_terminal(fb);
         // fps_update(fb); // Track FPS ON SCREEN!!
-        sleep_ms(1000);
-
-        t++;  // drives animation
+        // sleep_ms(1000);
     }
 }
