@@ -13,16 +13,17 @@
 // Definitions for rendering
 #define SCREEN_WIDTH    640
 #define SCREEN_HEIGHT   480
+#define LINE_STRIDE     (640 + 1)   // 1 additional byte for blanking
 
 // Definitions for signal generation
-#define PIXEL_CLOCK     25175000
+#define PIXEL_CLOCK     25000000
 #define RGB_ACTIVE      639
 #define H_ACTIVE        655         // Active and front porch - 1
 #define V_ACTIVE        479         // Active -1
-#define TXCOUNT         SCREEN_WIDTH * SCREEN_HEIGHT
+#define TXCOUNT         LINE_STRIDE * SCREEN_HEIGHT  // A +1 here in width for stuffing a blanking byte into the DMA stream
 #define HSYNC_DIV       ((float)SYS_CLK_HZ / PIXEL_CLOCK)
 #define VSYNC_DIV       HSYNC_DIV
-#define RGB_DIV         HSYNC_DIV / 5.0f
+#define RGB_DIV         (float)HSYNC_DIV / 5.0f
 
 // State machine division accross PIO block
 #define HSYNC_SM    0
