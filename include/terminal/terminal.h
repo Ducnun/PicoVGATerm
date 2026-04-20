@@ -10,6 +10,7 @@ typedef struct {
     terminal_cell_t* cells;
     uint8_t rows;
     uint8_t cols;
+    uint8_t scroll_index;
 } screenbuffer_t;
 
 screenbuffer_t get_screenbuffer();
