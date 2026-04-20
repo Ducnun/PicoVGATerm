@@ -9,7 +9,6 @@ mov y, osr  ; We will pull pixel data into osr later so y is used as more perman
 
 .wrap_target
 
-; set pins, 0     ; set pixels black during blanking
 mov x, y        ; Now we copy our permanent y storage into our counting register x
 
 wait 1 irq 1 [3]; We wait for a new active line signal from the vsync program
@@ -19,6 +18,13 @@ colorout:
     pull block
     out pins, 8 [3]
     jmp x-- colorout
+
+; DMA stream is now primed with a last "blanking pixel"
+; This is the easiest way to implement blanking for 8 pins as a set instruction is limited to 5 pins
+; at once (see page 954 of the RP2350 datasheet)
+pull block
+out pins, 8
+
 .wrap
 
 
@@ -26,11 +32,10 @@ colorout:
 static inline void rgb_program_init(PIO pio, uint sm, uint offset, uint pin, uint8_t div) {
     pio_sm_config c = rgb_program_get_default_config(offset);
 
-    sm_config_set_set_pins(&c, pin, 8);
     sm_config_set_out_pins(&c, pin, 8);
 
     // longer FIFO to avoid bursty data
-    sm_config_set_fifo_join (&c, PIO_FIFO_JOIN_TX) ;
+    ; sm_config_set_fifo_join (&c, PIO_FIFO_JOIN_TX) ;
 
     sm_config_set_clkdiv(&c, div) ;
 

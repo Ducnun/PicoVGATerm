@@ -32,7 +32,7 @@ void start_vga(PIO pio) {
         rgb_data_channel,           // Channel to be configured
         &c0,                        // The configuration we just created
         &pio->txf[RGB_SM],          // write address (RGB PIO TX FIFO)
-        &framebuffer,               // The initial read address (pixel color array)
+        framebuffer,               // The initial read address (pixel color array)
         TXCOUNT,                    // Number of transfers (per byte)
         false                       // Don't start immediately
     );
@@ -67,5 +67,6 @@ framebuffer_t get_framebuffer(){
     fb.data = &framebuffer[0];
     fb.height = SCREEN_HEIGHT;
     fb.width = SCREEN_WIDTH;
+    fb.line_stride = LINE_STRIDE;
     return fb;
 }

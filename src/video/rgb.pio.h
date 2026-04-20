@@ -13,7 +13,7 @@
 // --- //
 
 #define rgb_wrap_target 2
-#define rgb_wrap 6
+#define rgb_wrap 8
 #define rgb_pio_version 0
 
 static const uint16_t rgb_program_instructions[] = {
@@ -25,13 +25,15 @@ static const uint16_t rgb_program_instructions[] = {
     0x80a0, //  4: pull   block
     0x6308, //  5: out    pins, 8                [3]
     0x0044, //  6: jmp    x--, 4
+    0x80a0, //  7: pull   block
+    0x6008, //  8: out    pins, 8
             //     .wrap
 };
 
 #if !PICO_NO_HARDWARE
 static const struct pio_program rgb_program = {
     .instructions = rgb_program_instructions,
-    .length = 7,
+    .length = 9,
     .origin = -1,
     .pio_version = rgb_pio_version,
 #if PICO_PIO_VERSION > 0
@@ -47,10 +49,9 @@ static inline pio_sm_config rgb_program_get_default_config(uint offset) {
 
 static inline void rgb_program_init(PIO pio, uint sm, uint offset, uint pin, uint8_t div) {
     pio_sm_config c = rgb_program_get_default_config(offset);
-    sm_config_set_set_pins(&c, pin, 8);
     sm_config_set_out_pins(&c, pin, 8);
     // longer FIFO to avoid bursty data
-    sm_config_set_fifo_join (&c, PIO_FIFO_JOIN_TX) ;
+    ; sm_config_set_fifo_join (&c, PIO_FIFO_JOIN_TX) ;
     sm_config_set_clkdiv(&c, div) ;
     pio_gpio_init(pio, pin);
     pio_gpio_init(pio, pin+1);
