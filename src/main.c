@@ -1,10 +1,9 @@
 #include "hardware/pio.h"
 #include "video/vga.h"
-#include "render/renderer.h"
 #include "render/fps.h"
+#include "terminal/terminal.h"
 
 #define VGA_PIO pio0
-#define LEFT_PAD 16
 
 void fill_terminal(){
     char ch = '0';   // slowly cycle characters
@@ -26,14 +25,13 @@ int main() {
 
     // Setup VGA video signal generation
     start_vga(VGA_PIO);
-    framebuffer_t fb = get_framebuffer();
 
     set_default_bg(VIOLET);
     set_default_fg(BLUE);
+    set_font(&FONT_EVEREST);
     fill_terminal();
 
     while (true) {
-        render_terminal(fb);
-        show_fps(fb);
+        show_fps();
     }
 }

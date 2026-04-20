@@ -1,7 +1,7 @@
 #pragma once
 
 #include "terminal/terminal_cell.h"
-#include "render/colors.h"
+#include "render/renderer.h"
 
 #define TERMINAL_ROWS   60
 #define TERMINAL_COLS   80
@@ -19,4 +19,4 @@ void set_default_bg(color_t color);
 void set_char(uint16_t px, uint16_t py, char c);
 void set_char_c(uint16_t px, uint16_t py, char c, color_t fg, color_t bg);
 void rm_char(uint16_t px, uint16_t py);
-void scroll(int rows);
+void scroll_screenbuffer(int16_t rows);

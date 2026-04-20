@@ -1,19 +1,19 @@
 #include "render/fps.h"
 
-void draw_fps(framebuffer_t fb, int fps) {
+void draw_fps(int fps) {
     int x = 24;
     int y = 8;
 
     // Optional: draw "FPS:"
-    draw_char(fb, x, y, 'F', RED, WHITE); x += 8;
-    draw_char(fb, x, y, 'P', RED, WHITE); x += 8;
-    draw_char(fb, x, y, 'S', RED, WHITE); x += 8;
-    draw_char(fb, x, y, ':', RED, WHITE); x += 8;
-    draw_char(fb, x, y, ' ', RED, WHITE); x += 8;
+    renderer_draw_char(x, y, 'F', RED, WHITE); x += 8;
+    renderer_draw_char(x, y, 'P', RED, WHITE); x += 8;
+    renderer_draw_char(x, y, 'S', RED, WHITE); x += 8;
+    renderer_draw_char(x, y, ':', RED, WHITE); x += 8;
+    renderer_draw_char(x, y, ' ', RED, WHITE); x += 8;
 
     // Handle 0 explicitly
     if (fps == 0) {
-        draw_char(fb, x, y, '0', RED, WHITE);
+        renderer_draw_char(x, y, '0', RED, WHITE);
         return;
     }
 
@@ -28,13 +28,13 @@ void draw_fps(framebuffer_t fb, int fps) {
 
     // Draw in correct order
     for (int i = count - 1; i >= 0; i--) {
-        draw_char(fb, x, y, digits[i], RED, WHITE);
+        renderer_draw_char(x, y, digits[i], RED, WHITE);
         x += 8;
     }
 }
 
 
-void show_fps(framebuffer_t fb) {
+void show_fps() {
     static int current_fps = 0;
     static uint32_t frame_count = 0;
     static absolute_time_t last_time;
@@ -57,5 +57,5 @@ void show_fps(framebuffer_t fb) {
     }
 
     // Draw every frame (cheap enough)
-    draw_fps(fb, current_fps);
+    draw_fps(current_fps);
 }
