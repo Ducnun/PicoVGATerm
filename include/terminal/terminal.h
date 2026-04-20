@@ -13,10 +13,9 @@ typedef struct {
     uint8_t scroll_index;
 } screenbuffer_t;
 
-screenbuffer_t get_screenbuffer();
-void set_default_fg(color_t color);
-void set_default_bg(color_t color);
-void set_char(uint16_t px, uint16_t py, char c);
-void set_char_c(uint16_t px, uint16_t py, char c, color_t fg, color_t bg);
-void rm_char(uint16_t px, uint16_t py);
-void scroll_screenbuffer(int16_t rows);
+void terminal_set_default_fg(color_t color);
+void terminal_set_default_bg(color_t color);
+void terminal_set_char(uint16_t px, uint16_t py, char c);
+void terminal_set_char_c(uint16_t px, uint16_t py, char c, color_t fg, color_t bg);
+void terminal_rm_char(uint16_t px, uint16_t py);
+void terminal_scroll(int rows);

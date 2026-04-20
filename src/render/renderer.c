@@ -21,8 +21,6 @@ void renderer_draw_char(int px, int py, char c, color_t fg, color_t bg) {
 
 void renderer_draw_raw_char(int px, int py, char c, uint8_t fg, uint8_t bg) {
     framebuffer_t fb = get_framebuffer();
-    if (px < 0 || py < 0 || px + FONT->width > fb.width || py + FONT->height > fb.height) return;
-
     const uint8_t* glyph = font_get_glyph(c);
 
     for (int row = 0; row < FONT->height; row++) {
@@ -32,5 +30,19 @@ void renderer_draw_raw_char(int px, int py, char c, uint8_t fg, uint8_t bg) {
         for (int col = 0; col < FONT->width; col++) {
             dst[col] = (bits & (1 << (7 - col))) ? fg : bg;
         }
+    }
+}
+
+void renderer_scroll_vertical(int lines){
+    framebuffer_t fb = get_framebuffer();
+    if (lines > 0){
+        memmove(fb.data,
+        fb.data + lines * fb.line_stride,
+        (fb.height - lines) * fb.line_stride);
+    }
+    if (lines < 0){
+        memmove(fb.data + lines * fb.line_stride,
+        fb.data,
+        (fb.height - lines) * fb.line_stride);
     }
 }

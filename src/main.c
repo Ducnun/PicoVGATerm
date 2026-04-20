@@ -6,13 +6,13 @@
 #define VGA_PIO pio0
 
 void fill_terminal(){
-    char ch = '0';   // slowly cycle characters
+    char ch = 33;   // slowly cycle characters
     for (int y = 0; y < TERMINAL_ROWS; y++) {
         for (int x = 0; x < TERMINAL_COLS; x++) {
 
-            set_char(x, y, ch);
+            terminal_set_char(x, y, ch);
 
-            if (ch == '9') ch = '0';
+            if (ch == 33 + 96) ch = 33;
             else{
                 ch++;
             }
@@ -26,12 +26,18 @@ int main() {
     // Setup VGA video signal generation
     start_vga(VGA_PIO);
 
-    set_default_bg(VIOLET);
-    set_default_fg(BLUE);
+    terminal_set_default_bg(VIOLET);
+    terminal_set_default_fg(BLUE);
     set_font(&FONT_EVEREST);
-    fill_terminal();
+
+    sleep_ms(10000);     // Time for the HDMI upscaler and grabber to wake up
 
     while (true) {
         show_fps();
+        fill_terminal();
+        for (int row = 0; row < TERMINAL_ROWS; row++) {
+            terminal_scroll(1);
+            sleep_ms(50);
+        }
     }
 }
