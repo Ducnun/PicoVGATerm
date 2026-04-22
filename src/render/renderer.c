@@ -40,9 +40,39 @@ void renderer_scroll_vertical(int lines){
         fb.data + lines * fb.line_stride,
         (fb.height - lines) * fb.line_stride);
     }
-    if (lines < 0){
+    else if (lines < 0){
         memmove(fb.data + lines * fb.line_stride,
         fb.data,
         (fb.height - lines) * fb.line_stride);
+    }
+}
+
+void renderer_fill_rectangle(int px, int py, int height, int width, color_t color){
+    framebuffer_t fb = get_framebuffer();
+
+    // clip (important to avoid memory corruption)
+    if (px < 0) {
+        width += px;
+        px = 0;
+    }
+    if (py < 0) {
+        height += py;
+        py = 0;
+    }
+    if (px + width > fb.width) {
+        width = fb.width - px;
+    }
+    if (py + height > fb.height) {
+        height = fb.height - py;
+    }
+
+    if (width <= 0 || height <= 0) return;
+
+    uint8_t color_val = color_lut[color];
+
+    for (int row = 0; row < height; row++) {
+        uint8_t* dst = &fb.data[(py + row) * fb.line_stride + px];
+
+        memset(dst, color_val, width);
     }
 }

@@ -64,16 +64,18 @@ void terminal_scroll(int rows){
         if (viewport_start < 0) viewport_start += TERMINAL_ROWS;
 
     renderer_scroll_vertical(rows * FONT->height);
-
+    
     if (rows > 0) {
         // redraw bottom rows
         for (int r = TERMINAL_ROWS - rows; r < TERMINAL_ROWS; r++) {
             redraw_row(r);
         }
+        renderer_fill_rectangle(0, TERMINAL_ROWS * FONT->height - FONT->height * rows, FONT->height * TERMINAL_ROWS, TERMINAL_COLS * FONT->width, terminal_default_bg);
     } else if (rows < 0) {
         // redraw top rows
         for (int r = 0; r < -rows; r++) {
             redraw_row(r);
         }
+        renderer_fill_rectangle(0, 0, FONT->height * -rows, TERMINAL_COLS * FONT->width, terminal_default_bg);
     }
 }

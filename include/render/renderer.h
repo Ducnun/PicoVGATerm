@@ -17,3 +17,4 @@
 void renderer_draw_char(int px, int py, char c, color_t fg, color_t bg);
 void renderer_draw_raw_char(int px, int py, char c, uint8_t fg, uint8_t bg);
 void renderer_scroll_vertical(int lines);
+void renderer_fill_rectangle(int px, int py, int height, int width, color_t color);

@@ -14,7 +14,7 @@ static const font_t FONT_EVEREST 	= {FONT_EVEREST_BITMAP, 8, 8};
 static const font_t FONT_ENVIOUS 	= {FONT_ENVIOUS_BITMAP, 8, 8};
 
 // Global font that is currently used
-static const font_t* FONT = &FONT_ENVIOUS;
+static const font_t* FONT = &FONT_EVEREST;
 
 static inline const uint8_t* font_get_glyph(char c) {
     uint8_t uc = (uint8_t)c;
