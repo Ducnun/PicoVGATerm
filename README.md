@@ -1,6 +1,9 @@
 # Pico GPU
 The goal of this project is to implement a simple graphics processor based on the RP2350 microcontroller. It will be able to receive a set of instructions from an external source, render this into an image, and output this to a VGA output.
 
+A simple test pattern generated with the current version to test the terminal capabilities looks as follows:
+![](/docs/assets/screen_capture.png)
+
 ## Building the program
 The program can be built using platformio. In the .ini file it is possible to specify specific pins for the RGB pins and the HSYNC and VSYNC pins through the ```-DCUSTOM_VGA_PINS``` flags.
 
