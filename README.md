@@ -1,6 +1,12 @@
 # Pico GPU
 The goal of this project is to implement a simple graphics processor based on the RP2350 microcontroller. It will be able to receive a set of instructions from an external source, render this into an image, and output this to a VGA output.
 
+## Building the program
+The program can be built using platformio. In the .ini file it is possible to specify specific pins for the RGB pins and the HSYNC and VSYNC pins through the ```-DCUSTOM_VGA_PINS``` flags.
+
+## Hardware Setup
+The hardware required for this project is an RP2350 based board, some specific resistors and a VGA connector (d-sub 15). More information about the schematics can be found [here](docs/hardware_schematics.md). Other similar projects have used an RP2040 in the past, but this will not work in this project as the RP2040 does not have enough SRAM to hold a full framebuffer, complicating the rendering process significantly.
+
 ## Current Limitations
 Due to the way that the programmable IO blocks in the microcontroller scale their clocks and the current reliance of 3 separate state machines, the pixel clock is currently not running at a perfect 25.175 MHz clock. Instead, to use integer clock division for the state machine without breaking the reliability of the PLL on the microcontroller, a pixel clock of 25MHz is set. Most displays will support this perfectly fine, but the introduction of upscalers or very strict displays might result in the video signal not being recognized.
 
