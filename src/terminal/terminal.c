@@ -13,6 +13,33 @@ void terminal_set_default_bg(color_t color){
     terminal_default_bg = color_lut[color];
 }
 
+void terminal_print_char(char c){
+    terminal_set_char(terminal_cursor.x, terminal_cursor.y, c);
+    terminal_cursor.x++;
+
+    // Horizontal wrap
+    if (terminal_cursor.x >= TERMINAL_COLS){
+        terminal_cursor.x = 0;
+        terminal_cursor.y++;
+    }
+    // Vertical wrap
+    if (terminal_cursor.y >= TERMINAL_ROWS){
+        terminal_scroll(1);
+        terminal_cursor.y = TERMINAL_ROWS - 1;
+    }
+}
+
+void terminal_newline(){
+    terminal_cursor.x = 0;
+    terminal_cursor.y++;
+
+    // Vertical wrap
+    if (terminal_cursor.y >= TERMINAL_ROWS){
+        terminal_scroll(1);
+        terminal_cursor.y = TERMINAL_ROWS - 1;
+    }
+}
+
 void terminal_set_char(uint16_t px, uint16_t py, char c){
     if (px >= TERMINAL_COLS || py >= TERMINAL_ROWS) return;
 
