@@ -17,16 +17,24 @@ int main() {
 
     // sleep_ms(10000);     // Time for the HDMI upscaler and grabber to wake up
 
+    uint8_t c = 33;
+    for (int y = 0; y < TERMINAL_ROWS + 4; y++){
+        for (int x = 0; x < TERMINAL_COLS - 40; x++){
+            terminal_print_char(c);
+            // terminal_render_cursor();
+            c++;
+            if (c == 96) c = 33;
+            sleep_ms(10);
+        }
+        terminal_newline();
+    }
+
     while (true) {
-        uint8_t c = 33;
         for (int y = 0; y < TERMINAL_ROWS; y++){
-            for (int x = 0; x < TERMINAL_COLS - 40; x++){
-                terminal_print_char(c);
-                c++;
-                if (c == 96) c = 33;
-                sleep_ms(1);
+            for (int x = 0; x < TERMINAL_COLS - 80; x++){
+                terminal_backspace();
+                sleep_ms(100);
             }
-            terminal_newline();
         }
     }
 }
