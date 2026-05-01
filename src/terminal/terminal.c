@@ -1,9 +1,14 @@
 #include "terminal/terminal.h"
 
-static terminal_cell_t screencells[TERMINAL_COLS * TERMINAL_ROWS];
+// Terminal data
+cursor_t cursor = {0, 0, true};
+terminal_cell_t screencells[TERMINAL_COLS * TERMINAL_ROWS];
+terminal_line_t screenlines[TERMINAL_ROWS];
+uint8_t terminal_default_fg = color_lut[WHITE];
+uint8_t terminal_default_bg = color_lut[BLACK];
+
+// Mutation values
 static uint8_t viewport_start = 0;
-static uint8_t terminal_default_fg = color_lut[WHITE];
-static uint8_t terminal_default_bg = color_lut[BLACK];
 
 static inline terminal_cell_t* terminal_get_cell(uint16_t px, uint16_t py){
     return screencells + ((viewport_start + py) % TERMINAL_ROWS * TERMINAL_COLS + px);
@@ -18,10 +23,15 @@ void terminal_set_default_bg(color_t color){
 }
 
 void terminal_print_char(char c){
-    terminal_set_char(terminal_cursor.x, terminal_cursor.y, c);
+    terminal_set_char(cursor.x, cursor.y, c);
 
-    uint16_t new_x = terminal_cursor.x + 1;
-    uint16_t new_y = terminal_cursor.y;
+    // Update line end
+    if (cursor.x > screenlines[cursor.y].length){
+        screenlines[cursor.y].length = cursor.x + 1;
+    }
+
+    uint16_t new_x = cursor.x + 1;
+    uint16_t new_y = cursor.y;
 
     // Horizontal wrap
     if (new_x >= TERMINAL_COLS){
@@ -38,19 +48,20 @@ void terminal_print_char(char c){
 
 void terminal_backspace(void){
     // Nothing to do at absolute top-left
-    if (terminal_cursor.x == 0 && terminal_cursor.y == 0){
+    if (cursor.x == 0 && cursor.y == 0){
         return;
     }
 
-    uint16_t new_x = terminal_cursor.x;
-    uint16_t new_y = terminal_cursor.y;
+    uint16_t new_x = cursor.x;
+    uint16_t new_y = cursor.y;
 
     if (new_x > 0){
         new_x--;
+        screenlines[cursor.y].length--;
     } else {
         // move to end of previous line
         new_y--;
-        new_x = TERMINAL_COLS - 1;
+        new_x = screenlines[new_y].length;
     }
 
     // Move cursor FIRST (this also clears old cursor visually)
@@ -62,7 +73,7 @@ void terminal_backspace(void){
 
 void terminal_newline(void){
     uint16_t new_x = 0;
-    uint16_t new_y = terminal_cursor.y + 1;
+    uint16_t new_y = cursor.y + 1;
 
     if (new_y >= TERMINAL_ROWS){
         terminal_scroll(1);
@@ -73,18 +84,18 @@ void terminal_newline(void){
 }
 
 void terminal_move_cursor(uint16_t px, uint16_t py){
-    if (px == terminal_cursor.x && py == terminal_cursor.y) return;
+    if (px == cursor.x && py == cursor.y) return;
 
-    terminal_redraw_cell(terminal_cursor.x, terminal_cursor.y);
-    terminal_cursor.x = px;
-    terminal_cursor.y = py;
+    terminal_redraw_cell(cursor.x, cursor.y);
+    cursor.x = px;
+    cursor.y = py;
 }
 
 void terminal_render_cursor(void){
-    if (!terminal_cursor.visible) return;
+    if (!cursor.visible) return;
 
-    int px = terminal_cursor.x * FONT->width;
-    int py = terminal_cursor.y * FONT->height;
+    int px = cursor.x * FONT->width;
+    int py = cursor.y * FONT->height;
 
     // simple version: invert block
     renderer_fill_rectangle(px, py + FONT->height - 2, 2, FONT->width, terminal_default_fg);
