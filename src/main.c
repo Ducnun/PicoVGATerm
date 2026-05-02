@@ -2,6 +2,8 @@
 #include "video/vga.h"
 #include "render/fps.h"
 #include "terminal/terminal.h"
+#include <stdio.h>
+#include "pico/stdlib.h"
 
 #define VGA_PIO pio0
 
@@ -12,29 +14,35 @@ int main() {
     start_vga(VGA_PIO);
 
     terminal_set_default_bg(BLACK);
-    terminal_set_default_fg(GREEN);
+    terminal_set_default_fg(WHITE);
     set_font(&FONT_ENVIOUS);
 
     // sleep_ms(10000);     // Time for the HDMI upscaler and grabber to wake up
 
-    uint8_t c = 33;
+    while (!stdio_usb_connected()) {
+        sleep_ms(10);
+    }
+    printf("Connected!\n");
+    printf("Running PicoVGATerm\n");
+
+    uint8_t c = '0';
 
 
     while (true) {
-        for (int y = 0; y < TERMINAL_ROWS + 4; y++){
-           for (int x = 0; x < TERMINAL_COLS - 60; x++){
+        for (int y = 0; y < TERMINAL_ROWS - 2; y++){
+           for (int x = 0; x < TERMINAL_COLS; x++){
                 terminal_print_char(c);
                 // terminal_render_cursor();
                 c++;
                 if (c == 96) c = 33;
-                sleep_ms(5);
+                sleep_ms(2);
             }
-            terminal_newline();
+            // terminal_newline();
         }
         for (int y = 0; y < TERMINAL_ROWS + 5; y++){
-            for (int x = 0; x < TERMINAL_COLS - 60; x++){
+            for (int x = 0; x < TERMINAL_COLS; x++){
                 terminal_backspace();
-                sleep_ms(10);
+                sleep_ms(1000);
             }
         }
     }
