@@ -29,7 +29,7 @@ int main() {
 
 
     while (true) {
-        for (int y = 0; y < TERMINAL_ROWS - 2; y++){
+        for (int y = 0; y < TERMINAL_ROWS - 1; y++){
            for (int x = 0; x < TERMINAL_COLS; x++){
                 terminal_print_char(c);
                 // terminal_render_cursor();
@@ -39,10 +39,20 @@ int main() {
             }
             // terminal_newline();
         }
-        for (int y = 0; y < TERMINAL_ROWS + 5; y++){
+        for (int y = 0; y < TERMINAL_ROWS - 58; y++){
+           for (int x = 0; x < TERMINAL_COLS; x++){
+                terminal_print_char(c);
+                terminal_render_cursor();
+                c++;
+                if (c == 96) c = 33;
+                sleep_ms(500);
+            }
+            // terminal_newline();
+        }
+        for (int y = 0; y < TERMINAL_ROWS - 56; y++){
             for (int x = 0; x < TERMINAL_COLS; x++){
                 terminal_backspace();
-                sleep_ms(1000);
+                sleep_ms(100);
             }
         }
     }
