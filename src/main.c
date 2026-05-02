@@ -2,23 +2,10 @@
 #include "video/vga.h"
 #include "render/fps.h"
 #include "terminal/terminal.h"
+#include <stdio.h>
+#include "pico/stdlib.h"
 
 #define VGA_PIO pio0
-
-void fill_terminal(){
-    char ch = 33;   // slowly cycle characters
-    for (int y = TERMINAL_ROWS - 1; y < TERMINAL_ROWS; y++) {
-        for (int x = 0; x < TERMINAL_COLS; x++) {
-
-            terminal_set_char(x, y, ch);
-
-            if (ch == 33 + 96) ch = 33;
-            else{
-                ch++;
-            }
-        }
-    }
-}
 
 int main() {
     stdio_init_all();
@@ -26,22 +13,47 @@ int main() {
     // Setup VGA video signal generation
     start_vga(VGA_PIO);
 
-    terminal_set_default_bg(BLACK);
-    terminal_set_default_fg(GREEN);
+    terminal_set_default_bg(BLUE);
+    terminal_set_default_fg(VIOLET);
     set_font(&FONT_ENVIOUS);
 
     // sleep_ms(10000);     // Time for the HDMI upscaler and grabber to wake up
 
+    while (!stdio_usb_connected()) {
+        sleep_ms(10);
+    }
+    printf("Connected!\n");
+    printf("Running PicoVGATerm\n");
+
+    uint8_t c = '0';
+
+
     while (true) {
-        for (int row = 0; row < TERMINAL_ROWS / 1; row++) {
-            fill_terminal();
-            terminal_scroll(1);
-            sleep_ms(250);
+        for (int y = 0; y < TERMINAL_ROWS - 1; y++){
+           for (int x = 0; x < TERMINAL_COLS; x++){
+                terminal_print_char(c);
+                // terminal_render_cursor();
+                c++;
+                if (c == 96) c = 33;
+                sleep_ms(2);
+            }
+            // terminal_newline();
         }
-        for (int row = 0; row < TERMINAL_ROWS /1; row++){
-            terminal_scroll(1);
-            sleep_ms(250);
+        for (int y = 0; y < TERMINAL_ROWS - 58; y++){
+           for (int x = 0; x < TERMINAL_COLS; x++){
+                terminal_print_char(c);
+                terminal_render_cursor();
+                c++;
+                if (c == 96) c = 33;
+                sleep_ms(500);
+            }
+            // terminal_newline();
         }
-        // show_fps();
+        for (int y = 0; y < TERMINAL_ROWS - 56; y++){
+            for (int x = 0; x < TERMINAL_COLS; x++){
+                terminal_backspace();
+                sleep_ms(100);
+            }
+        }
     }
 }
