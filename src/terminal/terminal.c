@@ -174,17 +174,30 @@ void terminal_scroll(int rows){
     renderer_scroll_vertical(rows * FONT->height);
     
     if (rows > 0) {
+        for (int r = terminal.rows - rows; r < terminal.rows; r++) {
+
+            // Clear logical buffer row
+            for (int c = 0; c < terminal.cols; c++) {
+                terminal_cell_t* cell = terminal_get_cell(c, r);
+                cell->c = ' ';
+                cell->fg = terminal.default_fg;
+                cell->bg = terminal.default_bg;
+            }
+
+            terminal.lines[r].length = 0;
+        }
+
+        renderer_fill_rectangle(0, terminal.rows * FONT->height - FONT->height * rows, FONT->height * terminal.rows, terminal.cols * FONT->width, terminal.default_bg);
         // redraw bottom rows
         for (int r = terminal.rows - rows; r < terminal.rows; r++) {
             redraw_row(r);
         }
-        renderer_fill_rectangle(0, terminal.rows * FONT->height - FONT->height * rows, FONT->height * terminal.rows, terminal.cols * FONT->width, terminal.default_bg);
     } else if (rows < 0) {
+        renderer_fill_rectangle(0, 0, FONT->height * -rows, terminal.cols * FONT->width, terminal.default_bg);
         // redraw top rows
         for (int r = 0; r < -rows; r++) {
             redraw_row(r);
         }
-        renderer_fill_rectangle(0, 0, FONT->height * -rows, terminal.cols * FONT->width, terminal.default_bg);
     }
 }
 
