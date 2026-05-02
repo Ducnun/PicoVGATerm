@@ -13,8 +13,8 @@ int main() {
     // Setup VGA video signal generation
     start_vga(VGA_PIO);
 
-    terminal_set_default_bg(BLACK);
-    terminal_set_default_fg(WHITE);
+    terminal_set_default_bg(BLUE);
+    terminal_set_default_fg(VIOLET);
     set_font(&FONT_ENVIOUS);
 
     // sleep_ms(10000);     // Time for the HDMI upscaler and grabber to wake up

@@ -23,12 +23,6 @@ static inline terminal_cell_t* terminal_get_cell(uint16_t px, uint16_t py){
     return terminal.cells + ((terminal.viewport_start + py) % terminal.rows * terminal.cols + px);
 }
 
-// TEMP Debugging func
-void print_cursor_info(){
-    printf("Cursor pos: %u, %u \n", terminal.cursor->y, terminal.cursor->x);
-    printf("Char at cursor: %c \n", terminal_get_cell(terminal.cursor->x, terminal.cursor->y)->c);
-}
-
 void terminal_set_default_fg(color_t color){
     terminal.default_fg = color_lut[color];
 }
@@ -44,8 +38,6 @@ void terminal_print_char(char c){
     if (terminal.cursor->x > terminal.lines[terminal.cursor->y].length){
         terminal.lines[terminal.cursor->y].length = terminal.cursor->x + 1;
     }
-    print_cursor_info();
-    printf("Updated line length: %d\n", terminal.lines[terminal.cursor->y].length);
 
     uint16_t new_x = terminal.cursor->x + 1;
     uint16_t new_y = terminal.cursor->y;
@@ -64,13 +56,9 @@ void terminal_print_char(char c){
 }
 
 void terminal_backspace(void){
-    // Nothing to do at absolute top-left
-    printf("Start of backspace\n");
     if (terminal.cursor->x == 0 && terminal.cursor->y == 0){
         return;
     }
-
-    print_cursor_info();
 
     uint16_t new_x = cursor.x;
     uint16_t new_y = cursor.y;
@@ -87,7 +75,6 @@ void terminal_backspace(void){
         } else {
             new_x = 0;
         }
-        printf("Wrapped around\n");
     }
 
     // Move cursor FIRST (this also clears old cursor visually)
@@ -203,7 +190,5 @@ void terminal_scroll(int rows){
 
 void terminal_redraw_cell(uint16_t px, uint16_t py){
     terminal_cell_t* cell = terminal_get_cell(px, py);
-    printf("Redrawing cell at: %u, %u\n", terminal.cursor->y, terminal.cursor->x);
-    printf("Cell value is now: %c\n", cell->c);
     renderer_draw_raw_char(px * FONT->width, py * FONT->height, cell->c, cell->fg, cell->bg);
 }
