@@ -16,7 +16,6 @@ void stream_uart_init(){
 void stream_poll_event(){
     while (uart_is_readable(UART_ID)){
         uint8_t b = uart_getc(UART_ID);
-        printf("%c", b);
         stream_rx(b);
     }
 }
@@ -28,13 +27,11 @@ void stream_rx(uint8_t b){
         case STREAM_RX_STATE_CMD:
             stream_state.cmd = b;
             stream_state.rx_state = STREAM_RX_STATE_LEN;
-            printf("CMD: %d\n", b);
             break;
 
         case STREAM_RX_STATE_LEN:
             stream_state.length = b;
             stream_state.buf_idx = 0;
-            printf("LEN: %d\n", b);
 
             if (b == 0){
                 stream_handle_command();
@@ -45,7 +42,6 @@ void stream_rx(uint8_t b){
             break;
 
         case STREAM_RX_STATE_ARG:
-            printf("ARG[%d]: %d\n", stream_state.buf_idx, b);
             stream_state.buffer[stream_state.buf_idx++] = b;
 
             if (stream_state.buf_idx >= stream_state.length){
