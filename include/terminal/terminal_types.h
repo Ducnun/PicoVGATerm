@@ -2,6 +2,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include "render/colors.h"
 
 // Cell flags
 #define CELL_FLAG_DIRTY     (1 << 0)
@@ -13,8 +14,8 @@
 // Standard terminal cell datafields, location is relative to the array and thus not stored
 typedef struct{
     char        c;
-    uint8_t     fg;
-    uint8_t     bg;
+    color_t     fg;
+    color_t     bg;
     uint8_t     flags;
 } terminal_cell_t;
 
@@ -38,6 +39,6 @@ typedef struct{
     cursor_t*           cursor;
     terminal_cell_t*    cells;
     terminal_line_t*    lines;
-    uint8_t             default_fg;
-    uint8_t             default_bg; 
+    color_t             default_fg;
+    color_t             default_bg; 
 } terminal_t;

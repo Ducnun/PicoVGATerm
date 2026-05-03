@@ -4,7 +4,7 @@
 
 // Terminal data
 cursor_t cursor = {0, 0, true};
-terminal_cell_t screencells[TERMINAL_COLS * TERMINAL_ROWS] = {' '};
+terminal_cell_t screencells[TERMINAL_COLS * TERMINAL_ROWS];
 terminal_line_t screenlines[TERMINAL_ROWS];
 
 // Complete terminal struct
@@ -13,22 +13,54 @@ terminal_t terminal = {
     TERMINAL_ROWS,
     0,
     &cursor,
-    &screencells,
-    &screenlines,
-    color_lut[WHITE],
-    color_lut[BLACK]
+    screencells,
+    screenlines,
+    WHITE,
+    BLACK
 };
 
 static inline terminal_cell_t* terminal_get_cell(uint16_t px, uint16_t py){
     return terminal.cells + ((terminal.viewport_start + py) % terminal.rows * terminal.cols + px);
 }
 
+void terminal_init(void){
+    terminal.viewport_start = 0;
+
+    for (int y = 0; y < terminal.rows; y++){
+        terminal.lines[y].length = 0;
+
+        for (int x = 0; x < terminal.cols; x++){
+            terminal_cell_t* cell = terminal_get_cell(x, y);
+            cell->c  = ' ';
+            cell->fg = terminal.default_fg;
+            cell->bg = terminal.default_bg;
+        }
+    }
+
+    // Now actually draw it
+    for (int y = 0; y < terminal.rows; y++){
+        for (int x = 0; x < terminal.cols; x++){
+            terminal_redraw_cell(x, y);
+        }
+    }
+}
+
 void terminal_set_default_fg(color_t color){
-    terminal.default_fg = color_lut[color];
+    terminal.default_fg = color;
 }
 
 void terminal_set_default_bg(color_t color){
-    terminal.default_bg = color_lut[color];
+    terminal.default_bg = color;
+
+    for (int y = 0; y < terminal.rows; y++){
+        for (int x = 0; x < terminal.cols; x++){
+            terminal_cell_t* cell = terminal_get_cell(x, y);
+
+            cell->bg = terminal.default_bg;
+
+            terminal_redraw_cell(x, y);
+        }
+    }
 }
 
 void terminal_print_char(char c){
@@ -121,7 +153,7 @@ void terminal_set_char(uint16_t px, uint16_t py, char c){
     cell->c = c;
     cell->fg = terminal.default_fg;
     cell->bg = terminal.default_bg;
-    renderer_draw_raw_char(px * FONT->width, py * FONT->height, c, cell->fg, cell->bg);
+    renderer_draw_char(px * FONT->width, py * FONT->height, c, cell->fg, cell->bg);
 }
 
 void terminal_set_char_c(uint16_t px, uint16_t py, char c, color_t fg, color_t bg){
@@ -131,7 +163,7 @@ void terminal_set_char_c(uint16_t px, uint16_t py, char c, color_t fg, color_t b
     cell->c = c;
     cell->fg = color_lut[fg];
     cell->bg = color_lut[bg];
-    renderer_draw_raw_char(px * FONT->width, py * FONT->height, c, cell->fg, cell->bg);
+    renderer_draw_char(px * FONT->width, py * FONT->height, c, cell->fg, cell->bg);
 }
 
 void terminal_rm_char(uint16_t px, uint16_t py){
@@ -141,14 +173,14 @@ void terminal_rm_char(uint16_t px, uint16_t py){
     cell-> c = ' ';
     cell->fg = terminal.default_fg;     // Probably not strictly necessary since any insertion updates this anyways
     cell->bg = terminal.default_bg;
-    renderer_draw_raw_char(px * FONT->width, py * FONT->height, ' ', cell->fg, cell->bg);
+    renderer_draw_char(px * FONT->width, py * FONT->height, ' ', cell->fg, cell->bg);
 }
 
 static void redraw_row(int screen_row) {
     for (int col = 0; col < terminal.cols; col++) {
         terminal_cell_t* cell = terminal_get_cell(col, screen_row);
 
-        renderer_draw_raw_char(col * FONT->width, screen_row * FONT->height, cell->c, cell->fg, cell->bg);
+        renderer_draw_char(col * FONT->width, screen_row * FONT->height, cell->c, cell->fg, cell->bg);
     }
 }
 
@@ -190,5 +222,5 @@ void terminal_scroll(int rows){
 
 void terminal_redraw_cell(uint16_t px, uint16_t py){
     terminal_cell_t* cell = terminal_get_cell(px, py);
-    renderer_draw_raw_char(px * FONT->width, py * FONT->height, cell->c, cell->fg, cell->bg);
+    renderer_draw_char(px * FONT->width, py * FONT->height, cell->c, cell->fg, cell->bg);
 }

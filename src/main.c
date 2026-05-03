@@ -20,6 +20,7 @@ int main() {
     // Setup terminal settings
     terminal_set_default_bg(BLUE);
     terminal_set_default_fg(VIOLET);
+    terminal_init();
     set_font(&FONT_ENVIOUS);
 
     // Wait for USB to be connected
@@ -32,5 +33,6 @@ int main() {
     while (true) {
         stream_poll_event();
         tight_loop_contents();  
+        terminal_render_cursor();
     }
 }

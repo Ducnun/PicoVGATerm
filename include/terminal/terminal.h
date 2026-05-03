@@ -6,6 +6,7 @@
 #define TERMINAL_ROWS   60
 #define TERMINAL_COLS   80
 
+void terminal_init();
 void terminal_set_default_fg(color_t color);
 void terminal_set_default_bg(color_t color);
 void terminal_print_char(char c);
