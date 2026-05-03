@@ -1,7 +1,14 @@
 #pragma once
 
 #include <stdint.h>
+#include <hardware/uart.h>
 #include "terminal/terminal.h"
+
+#define UART_ID uart0
+#define BAUD_RATE 115200
+#define UART_TX_PIN 0
+#define UART_RX_PIN 1
+#define STREAM_MAX_PAYLOAD 64
 
 typedef enum {
     STREAM_CMD_PRINT_CHAR = 0x01,
@@ -23,11 +30,15 @@ typedef enum {
     STREAM_RX_STATE_ARG,
 } STREAM_RX_STATE;
 
-static STREAM_RX_STATE stream_rx_state = STREAM_RX_STATE_CMD;
-static STREAM_CMD stream_current_cmd;
-static uint16_t stream_current_cmd_length = 0;
-static uint8_t stream_cmd_buffer[8];
-static uint8_t stream_cmd_buffer_index = 0;
+typedef struct {
+    STREAM_RX_STATE rx_state;
+    STREAM_CMD cmd;
+    uint8_t length;
+    uint8_t buffer[STREAM_MAX_PAYLOAD];
+    uint8_t buf_idx;
+} stream_state_t;
 
+void stream_uart_init();
+void stream_poll_event();
 void stream_rx(uint8_t b);
 void stream_handle_command();

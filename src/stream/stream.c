@@ -1,38 +1,79 @@
 #include "stream/stream.h"
+#include "stdio.h"
+#include "pico/stdlib.h"
 
+stream_state_t stream_state;
+
+// UART setup
+void stream_uart_init(){
+    uart_init(UART_ID, BAUD_RATE);
+    gpio_set_function(UART_TX_PIN, GPIO_FUNC_UART);
+    gpio_set_function(UART_RX_PIN, GPIO_FUNC_UART);
+    stream_state.rx_state = STREAM_RX_STATE_CMD;
+    stream_state.buf_idx = 0;
+}
+
+void stream_poll_event(){
+    while (uart_is_readable(UART_ID)){
+        uint8_t b = uart_getc(UART_ID);
+        printf("%c", b);
+        stream_rx(b);
+    }
+}
+
+// State machine that parses commands
 void stream_rx(uint8_t b){
-    switch(stream_rx_state){
+    switch(stream_state.rx_state){
 
         case STREAM_RX_STATE_CMD:
-            stream_current_cmd = b;
-            stream_rx_state = STREAM_RX_STATE_LEN;
+            stream_state.cmd = b;
+            stream_state.rx_state = STREAM_RX_STATE_LEN;
+            printf("CMD: %d\n", b);
             break;
 
         case STREAM_RX_STATE_LEN:
-            stream_current_cmd_length = b;
-            stream_cmd_buffer_index = 0;
+            stream_state.length = b;
+            stream_state.buf_idx = 0;
+            printf("LEN: %d\n", b);
 
             if (b == 0){
                 stream_handle_command();
-                stream_rx_state = STREAM_RX_STATE_CMD;
+                stream_state.rx_state = STREAM_RX_STATE_CMD;
             } else {
-                stream_rx_state = STREAM_RX_STATE_ARG;
+                stream_state.rx_state = STREAM_RX_STATE_ARG;
             }
             break;
 
         case STREAM_RX_STATE_ARG:
-            stream_cmd_buffer[stream_cmd_buffer_index++] = b;
+            printf("ARG[%d]: %d\n", stream_state.buf_idx, b);
+            stream_state.buffer[stream_state.buf_idx++] = b;
 
-            if (stream_cmd_buffer_index >= stream_current_cmd_length){
+            if (stream_state.buf_idx >= stream_state.length){
                 stream_handle_command();
-                stream_rx_state = STREAM_RX_STATE_CMD;
+                stream_state.rx_state = STREAM_RX_STATE_CMD;
             }
             break;
     }
 }
 
 void stream_handle_command(){
-    switch (stream_current_cmd){
+    switch (stream_state.cmd){
         case STREAM_CMD_PRINT_CHAR:
+            terminal_print_char(stream_state.buffer[0]);
+            break;
+        case STREAM_CMD_PRINT_STRING:
+            for (int i = 0; i < stream_state.length; i++){
+                if (stream_state.buffer[i] == '\n') terminal_newline();
+                else terminal_print_char(stream_state.buffer[i]);
+            }
+            break;
+        case STREAM_CMD_NEWLINE:
+            terminal_newline();
+            break;
+        case STREAM_CMD_BACKSPACE:
+            terminal_backspace();
+            break;
+        default:
+            break;
     }
 }
