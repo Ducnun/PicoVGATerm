@@ -4,6 +4,23 @@
 
 stream_state_t stream_state;
 
+// UART ring buffer for IRQ
+volatile uint8_t rx_ring[RX_RING_SIZE];
+volatile uint16_t rx_head = 0;
+volatile uint16_t rx_tail = 0;
+
+void on_uart_rx() {
+    while (uart_is_readable(UART_ID)) {
+        uint8_t b = uart_getc(UART_ID);
+        uint16_t next = (rx_head + 1) % RX_RING_SIZE;
+
+        if (next != rx_tail) { // avoid overflow
+            rx_ring[rx_head] = b;
+            rx_head = next;
+        }
+    }
+}
+
 // UART setup
 void stream_uart_init(){
     uart_init(UART_ID, BAUD_RATE);
@@ -11,17 +28,22 @@ void stream_uart_init(){
     gpio_set_function(UART_RX_PIN, GPIO_FUNC_UART);
     stream_state.rx_state = STREAM_RX_STATE_CMD;
     stream_state.buf_idx = 0;
+    irq_set_exclusive_handler(UART0_IRQ, on_uart_rx);
+    irq_set_enabled(UART0_IRQ, true);
+    uart_set_irq_enables(UART_ID, true, false);
 }
 
 void stream_poll_event(){
-    while (uart_is_readable(UART_ID)){
-        uint8_t b = uart_getc(UART_ID);
+    while (rx_tail != rx_head) {
+        uint8_t b = rx_ring[rx_tail];
+        rx_tail = (rx_tail + 1) % RX_RING_SIZE;
         stream_rx(b);
     }
 }
 
 // State machine that parses commands
 void stream_rx(uint8_t b){
+    printf("cmd: %d\n", stream_state.cmd);
     switch(stream_state.rx_state){
 
         case STREAM_RX_STATE_CMD:

@@ -5,10 +5,11 @@
 #include "terminal/terminal.h"
 
 #define UART_ID uart0
-#define BAUD_RATE 115200
+#define BAUD_RATE 1000000
 #define UART_TX_PIN 0
 #define UART_RX_PIN 1
 #define STREAM_MAX_PAYLOAD 64
+#define RX_RING_SIZE 256
 
 typedef enum {
     STREAM_CMD_PRINT_CHAR = 0x01,
