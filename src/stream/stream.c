@@ -43,8 +43,14 @@ void stream_poll_event(){
 
 // State machine that parses commands
 void stream_rx(uint8_t b){
-    printf("cmd: %d\n", stream_state.cmd);
     switch(stream_state.rx_state){
+        case STREAM_RX_STATE_IDLE:
+            if (b == STREAM_CMD_SYNC_BYTE){
+                stream_state.rx_state = STREAM_RX_STATE_CMD;
+                stream_state.buf_idx = 0;
+                stream_state.length = 0;
+            }
+            break;
 
         case STREAM_RX_STATE_CMD:
             stream_state.cmd = b;
@@ -53,11 +59,18 @@ void stream_rx(uint8_t b){
 
         case STREAM_RX_STATE_LEN:
             stream_state.length = b;
+
+            if (b > STREAM_MAX_PAYLOAD) {
+                // invalid packet, resync
+                stream_state.rx_state = STREAM_RX_STATE_IDLE;
+                break;
+            }
+
             stream_state.buf_idx = 0;
 
             if (b == 0){
                 stream_handle_command();
-                stream_state.rx_state = STREAM_RX_STATE_CMD;
+                stream_state.rx_state = STREAM_RX_STATE_IDLE;
             } else {
                 stream_state.rx_state = STREAM_RX_STATE_ARG;
             }
@@ -68,7 +81,7 @@ void stream_rx(uint8_t b){
 
             if (stream_state.buf_idx >= stream_state.length){
                 stream_handle_command();
-                stream_state.rx_state = STREAM_RX_STATE_CMD;
+                stream_state.rx_state = STREAM_RX_STATE_IDLE;
             }
             break;
     }
