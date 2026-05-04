@@ -21,12 +21,20 @@ void on_uart_rx() {
     }
 }
 
+static inline uint8_t crc8_update(uint8_t crc, uint8_t data) {
+    crc ^= data;
+    for (int i = 0; i < 8; i++) {
+        crc = (crc & 0x80) ? (crc << 1) ^ 0x07 : (crc << 1);
+    }
+    return crc;
+}
+
 // UART setup
 void stream_uart_init(){
     uart_init(UART_ID, BAUD_RATE);
     gpio_set_function(UART_TX_PIN, GPIO_FUNC_UART);
     gpio_set_function(UART_RX_PIN, GPIO_FUNC_UART);
-    stream_state.rx_state = STREAM_RX_STATE_CMD;
+    stream_state.rx_state = STREAM_RX_STATE_IDLE;
     stream_state.buf_idx = 0;
     irq_set_exclusive_handler(UART0_IRQ, on_uart_rx);
     irq_set_enabled(UART0_IRQ, true);
@@ -44,21 +52,27 @@ void stream_poll_event(){
 // State machine that parses commands
 void stream_rx(uint8_t b){
     switch(stream_state.rx_state){
+        // On a sync byte, we reset and move on to receiving the CMD
         case STREAM_RX_STATE_IDLE:
             if (b == STREAM_CMD_SYNC_BYTE){
                 stream_state.rx_state = STREAM_RX_STATE_CMD;
                 stream_state.buf_idx = 0;
                 stream_state.length = 0;
+                stream_state.crc = 0;
             }
             break;
-
+        
+        // Store command and start generating CRC
         case STREAM_RX_STATE_CMD:
             stream_state.cmd = b;
+            stream_state.crc = crc8_update(0, b);
             stream_state.rx_state = STREAM_RX_STATE_LEN;
             break;
 
+        // Receive length (even no packets with no payload have a length byte)
         case STREAM_RX_STATE_LEN:
             stream_state.length = b;
+            stream_state.crc = crc8_update(stream_state.crc, b);
 
             if (b > STREAM_MAX_PAYLOAD) {
                 // invalid packet, resync
@@ -67,22 +81,33 @@ void stream_rx(uint8_t b){
             }
 
             stream_state.buf_idx = 0;
-
+            // If length is 0, straight to CRC check
             if (b == 0){
-                stream_handle_command();
-                stream_state.rx_state = STREAM_RX_STATE_IDLE;
+                stream_state.rx_state = STREAM_RX_STATE_CRC;
             } else {
                 stream_state.rx_state = STREAM_RX_STATE_ARG;
             }
             break;
 
         case STREAM_RX_STATE_ARG:
+            stream_state.crc = crc8_update(stream_state.crc, b);
             stream_state.buffer[stream_state.buf_idx++] = b;
 
             if (stream_state.buf_idx >= stream_state.length){
-                stream_handle_command();
-                stream_state.rx_state = STREAM_RX_STATE_IDLE;
+                stream_state.rx_state = STREAM_RX_STATE_CRC;
             }
+            break;
+        
+        // Handle command if transmitted CRC matches our 
+        case STREAM_RX_STATE_CRC:
+            if (b == stream_state.crc){
+                stream_handle_command();
+                // TODO: send ack
+            }
+            else{
+                // TODO: send nack
+            }
+            stream_state.rx_state = STREAM_RX_STATE_IDLE;
             break;
     }
 }

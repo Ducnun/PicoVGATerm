@@ -11,9 +11,13 @@
 #define STREAM_MAX_PAYLOAD 64
 #define RX_RING_SIZE 1024
 
+// Packet layout
+// [SYNC, CMD, LEN, ARGS[0-63], CRC]
+
 typedef enum {
     STREAM_CMD_SYNC_BYTE    = 0xFF,
     STREAM_CMD_ACK_BYTE     = 0xFE,
+    STREAM_CMD_NACK_BYTE    = 0xFD,
     STREAM_CMD_PRINT_CHAR   = 0x01,
     STREAM_CMD_PRINT_STRING = 0x02,
     STREAM_CMD_NEWLINE      = 0x03,
@@ -32,6 +36,7 @@ typedef enum {
     STREAM_RX_STATE_CMD,
     STREAM_RX_STATE_LEN,
     STREAM_RX_STATE_ARG,
+    STREAM_RX_STATE_CRC,
 } STREAM_RX_STATE;
 
 typedef struct {
@@ -40,6 +45,7 @@ typedef struct {
     uint8_t length;
     uint8_t buffer[STREAM_MAX_PAYLOAD];
     uint8_t buf_idx;
+    uint8_t crc;
 } stream_state_t;
 
 void stream_uart_init();
