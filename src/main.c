@@ -23,13 +23,6 @@ int main() {
     terminal_init();
     set_font(&FONT_ENVIOUS);
 
-    // Wait for USB to be connected
-    // while (!stdio_usb_connected()) {
-    //     sleep_ms(10);
-    // }
-    // printf("Connected!\n");
-    // printf("Running PicoVGATerm\n");
-
     while (true) {
         stream_poll_event();
         tight_loop_contents();  
