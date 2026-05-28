@@ -224,3 +224,14 @@ void terminal_redraw_cell(uint16_t px, uint16_t py){
     terminal_cell_t* cell = terminal_get_cell(px, py);
     renderer_draw_char(px * FONT->width, py * FONT->height, cell->c, cell->fg, cell->bg);
 }
+
+void terminal_clear(void){
+    terminal.cursor->x = 0;
+    terminal.cursor->y = 0;
+    for (int row = 0; row < terminal.rows; row++){
+        for (int col = 0; col < terminal.cols; col++){
+            terminal.cells[row + col * terminal.rows].c = ' ';
+        }
+    }
+    renderer_fill_rectangle(0, 0, terminal.rows * FONT->height, terminal.cols * FONT->width, terminal.default_bg);
+}

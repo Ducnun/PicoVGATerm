@@ -29,6 +29,7 @@ typedef enum {
     STREAM_CMD_SET_BG       = 0x21,
     STREAM_CMD_CLEAR        = 0x30,
     STREAM_CMD_SCROLL       = 0x31,
+    STREAM_CMD_RESYNC       = 0x80,
 } STREAM_CMD;
 
 typedef enum {
@@ -39,6 +40,11 @@ typedef enum {
     STREAM_RX_STATE_SEQ,
     STREAM_RX_STATE_CRC,
 } STREAM_RX_STATE;
+
+typedef enum {
+    STREAM_NACK_CRC = 0x00,
+    STREAM_NACK_SEQ = 0x01,
+} STREAM_NACK_REASON;
 
 typedef struct {
     STREAM_RX_STATE rx_state;

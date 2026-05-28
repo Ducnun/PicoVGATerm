@@ -9,6 +9,16 @@ volatile uint8_t rx_ring[RX_RING_SIZE];
 volatile uint16_t rx_head = 0;
 volatile uint16_t rx_tail = 0;
 
+// Local only functions (predeclaration)
+void send_ack();
+void send_nack(STREAM_NACK_REASON reason);
+void process_state_idle(uint8_t b);
+void process_state_cmd(uint8_t b);
+void process_state_len(uint8_t b);
+void process_state_arg(uint8_t b);
+void process_state_seq(uint8_t b);
+void process_state_crc(uint8_t b);
+
 void on_uart_rx() {
     while (uart_is_readable(UART_ID)) {
         uint8_t b = uart_getc(UART_ID);
@@ -54,101 +64,49 @@ void stream_rx(uint8_t b){
     switch(stream_state.rx_state){
         // On a sync byte, we reset and move on to receiving the CMD
         case STREAM_RX_STATE_IDLE:
-            if (b == STREAM_CMD_SYNC_BYTE){
-                stream_state.rx_state = STREAM_RX_STATE_CMD;
-                stream_state.buf_idx = 0;
-                stream_state.length = 0;
-                stream_state.crc = 0;
-            }
-#ifdef DEBUG_PRINTS
-    printf("\nNEW MESSAGE\n");
-#endif
+            process_state_idle(b);
+            #ifdef DEBUG_PRINTS
+                printf("\nNEW MESSAGE\n");
+            #endif
             break;
         
         // Store command and start generating CRC
         case STREAM_RX_STATE_CMD:
-            stream_state.cmd = b;
-            stream_state.crc = crc8_update(0, b);
-            stream_state.rx_state = STREAM_RX_STATE_LEN;
-
-#ifdef DEBUG_PRINTS
-    printf("CMD: %d\n", b);
-#endif
+            process_state_cmd(b);
+            #ifdef DEBUG_PRINTS
+                printf("CMD: %d\n", b);
+            #endif
             break;
 
         // Receive length (even no packets with no payload have a length byte)
         case STREAM_RX_STATE_LEN:
-            stream_state.length = b;
-            stream_state.crc = crc8_update(stream_state.crc, b);
-
-            if (b > STREAM_MAX_PAYLOAD) {
-                // invalid packet, resync
-                stream_state.rx_state = STREAM_RX_STATE_IDLE;
-                break;
-            }
-
-            stream_state.buf_idx = 0;
-            // If length is 0, straight to SEQ check
-            if (b == 0){
-                stream_state.rx_state = STREAM_RX_STATE_SEQ;
-            } else {
-                stream_state.rx_state = STREAM_RX_STATE_ARG;
-            }
-#ifdef DEBUG_PRINTS
-    printf("LEN: %d\n", b);
-#endif
+            process_state_len(b);      
+            #ifdef DEBUG_PRINTS
+                printf("LEN: %d\n", b);
+            #endif
             break;
 
         case STREAM_RX_STATE_ARG:
-            stream_state.crc = crc8_update(stream_state.crc, b);
-            stream_state.buffer[stream_state.buf_idx++] = b;
-
-            if (stream_state.buf_idx >= stream_state.length){
-                stream_state.rx_state = STREAM_RX_STATE_SEQ;
-            }
-#ifdef DEBUG_PRINTS
-    printf("ARG[%d]: %d\n", stream_state.buf_idx, b);
-#endif
+            process_state_arg(b);
+            #ifdef DEBUG_PRINTS
+                printf("ARG[%d]: %d\n", stream_state.buf_idx, b);
+            #endif
             break;
 
         // Check the sequence byte so no messages were missed
         case STREAM_RX_STATE_SEQ:
-            stream_state.crc = crc8_update(stream_state.crc, b);
-            stream_state.seq = b;
-
-            if (!stream_state.seq_initialized) {
-                // Always accept first packet
-                stream_state.prev_seq = stream_state.seq;
-                stream_state.seq_initialized = true;
-                stream_state.rx_state = STREAM_RX_STATE_CRC;
-            }
-            else if ((uint8_t)(stream_state.prev_seq + 1) == stream_state.seq) {
-                // Correct next packet
-                stream_state.prev_seq = stream_state.seq;
-                stream_state.rx_state = STREAM_RX_STATE_CRC;
-            }
-            else {
-                // Packet loss / out of order
-                stream_state.rx_state = STREAM_RX_STATE_IDLE;
-            }
-#ifdef DEBUG_PRINTS
-    printf("SEQ: %d\n", b);
-#endif
+            process_state_seq(b);
+            #ifdef DEBUG_PRINTS
+                printf("SEQ: %d\n", b);
+            #endif
             break;
         
         // Handle command if transmitted CRC matches our 
         case STREAM_RX_STATE_CRC:
-#ifdef DEBUG_PRINTS
-    printf("CRC: %d\n", b);
-#endif
-            if (b == stream_state.crc){
-                stream_handle_command();
-                // TODO: send ack
-            }
-            else{
-                // TODO: send nack
-            }
-            stream_state.rx_state = STREAM_RX_STATE_IDLE;
+            process_state_crc(b);
+            #ifdef DEBUG_PRINTS
+                printf("CRC: %d\n", b);
+            #endif
             break;
     }
 }
@@ -170,7 +128,93 @@ void stream_handle_command(){
         case STREAM_CMD_BACKSPACE:
             terminal_backspace();
             break;
+        case STREAM_CMD_CLEAR:
+            terminal_clear();
         default:
             break;
     }
+}
+
+/*
+** State machine helper functions
+*/
+void process_state_idle(uint8_t b){
+    if (b == STREAM_CMD_SYNC_BYTE){
+        stream_state.rx_state = STREAM_RX_STATE_CMD;
+        stream_state.buf_idx = 0;
+        stream_state.length = 0;
+        stream_state.crc = 0;
+    }
+}
+
+void process_state_cmd(uint8_t b){
+    stream_state.cmd = b;
+    stream_state.crc = crc8_update(0, b);
+    stream_state.rx_state = STREAM_RX_STATE_LEN;
+}
+
+void process_state_len(uint8_t b){
+    stream_state.length = b;
+    stream_state.crc = crc8_update(stream_state.crc, b);
+
+    if (b > STREAM_MAX_PAYLOAD) {
+        // invalid packet, resync
+        stream_state.rx_state = STREAM_RX_STATE_IDLE;
+        return;
+    }
+
+    stream_state.buf_idx = 0;
+    // If length is 0, straight to SEQ check
+    if (b == 0){
+        stream_state.rx_state = STREAM_RX_STATE_SEQ;
+    } else {
+        stream_state.rx_state = STREAM_RX_STATE_ARG;
+    }
+}
+
+void process_state_arg(uint8_t b){
+    stream_state.crc = crc8_update(stream_state.crc, b);
+    stream_state.buffer[stream_state.buf_idx++] = b;
+
+    if (stream_state.buf_idx >= stream_state.length){
+        stream_state.rx_state = STREAM_RX_STATE_SEQ;
+    }
+}
+
+void process_state_seq(uint8_t b){
+    stream_state.crc = crc8_update(stream_state.crc, b);
+    stream_state.seq = b;
+    stream_state.rx_state = STREAM_RX_STATE_CRC;
+}
+
+void process_state_crc(uint8_t b){
+    if (b == stream_state.crc){
+        // RESYNC packets bypass sequence validation
+        if (stream_state.cmd == STREAM_CMD_RESYNC) {
+
+            stream_state.prev_seq = stream_state.seq;
+            stream_state.seq_initialized = true;
+            stream_state.rx_state = STREAM_RX_STATE_IDLE;
+            return;
+        }
+
+        // First packet accepted unconditionally
+        if (!stream_state.seq_initialized) {
+            stream_state.prev_seq = stream_state.seq;
+            stream_state.seq_initialized = true;
+        }
+        else if ((uint8_t)(stream_state.prev_seq + 1) != stream_state.seq) {
+
+            // Sequence mismatch -> reject packet
+            stream_state.rx_state = STREAM_RX_STATE_IDLE;
+            return;
+        }
+        else {
+            stream_state.prev_seq = stream_state.seq;
+        }
+
+        stream_handle_command();
+    }
+
+    stream_state.rx_state = STREAM_RX_STATE_IDLE;
 }

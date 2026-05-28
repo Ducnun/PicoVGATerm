@@ -18,8 +18,8 @@ int main() {
     stream_uart_init();
 
     // Setup terminal settings
-    terminal_set_default_bg(BLUE);
-    terminal_set_default_fg(VIOLET);
+    terminal_set_default_bg(BLACK);
+    terminal_set_default_fg(WHITE);
     terminal_init();
     set_font(&FONT_ENVIOUS);
 
