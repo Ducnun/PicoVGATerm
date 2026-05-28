@@ -6,8 +6,10 @@
 
 #define UART_ID uart0
 #define BAUD_RATE 1000000
-#define UART_TX_PIN 0
-#define UART_RX_PIN 1
+#define UART_TX_PIN     0
+#define UART_RX_PIN     1
+#define UART_CTS_PIN    26 
+#define UART_RTS_PIN    27
 #define STREAM_MAX_PAYLOAD 64
 #define RX_RING_SIZE 1024
 
@@ -22,6 +24,7 @@ typedef enum {
     STREAM_CMD_PRINT_STRING = 0x02,
     STREAM_CMD_NEWLINE      = 0x03,
     STREAM_CMD_BACKSPACE    = 0x04,
+    STREAM_CMD_REDRAW_LINE  = 0x05,
     STREAM_CMD_SET_CURSOR   = 0x10,
     STREAM_CMD_GET_CURSOR   = 0x11,
     STREAM_CMD_SET_CURSOR_VISIBLE = 0x12,
@@ -50,7 +53,7 @@ typedef struct {
     STREAM_RX_STATE rx_state;
     STREAM_CMD      cmd;
     uint8_t         length;
-    uint8_t         buffer[STREAM_MAX_PAYLOAD];
+    uint8_t         data[STREAM_MAX_PAYLOAD];
     uint8_t         buf_idx;
     bool            seq_initialized;
     uint8_t         prev_seq;

@@ -114,12 +114,12 @@ void stream_rx(uint8_t b){
 void stream_handle_command(){
     switch (stream_state.cmd){
         case STREAM_CMD_PRINT_CHAR:
-            terminal_print_char(stream_state.buffer[0]);
+            terminal_print_char(stream_state.data[0]);
             break;
         case STREAM_CMD_PRINT_STRING:
             for (int i = 0; i < stream_state.length; i++){
-                if (stream_state.buffer[i] == '\n') terminal_newline();
-                else terminal_print_char(stream_state.buffer[i]);
+                if (stream_state.data[i] == '\n') terminal_newline();
+                else terminal_print_char(stream_state.data[i]);
             }
             break;
         case STREAM_CMD_NEWLINE:
@@ -130,6 +130,7 @@ void stream_handle_command(){
             break;
         case STREAM_CMD_CLEAR:
             terminal_clear();
+            break;
         default:
             break;
     }
@@ -174,7 +175,7 @@ void process_state_len(uint8_t b){
 
 void process_state_arg(uint8_t b){
     stream_state.crc = crc8_update(stream_state.crc, b);
-    stream_state.buffer[stream_state.buf_idx++] = b;
+    stream_state.data[stream_state.buf_idx++] = b;
 
     if (stream_state.buf_idx >= stream_state.length){
         stream_state.rx_state = STREAM_RX_STATE_SEQ;

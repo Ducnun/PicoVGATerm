@@ -21,3 +21,4 @@ void terminal_set_char(uint16_t px, uint16_t py, char c);
 void terminal_set_char_c(uint16_t px, uint16_t py, char c, color_t fg, color_t bg);
 void terminal_rm_char(uint16_t px, uint16_t py);
 void terminal_redraw_cell(uint16_t px, uint16_t py);
+void terminal_flush();

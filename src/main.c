@@ -8,7 +8,7 @@
 
 #define VGA_PIO pio0
 
-int main() {
+int main(){
     stdio_init_all();
 
     // Setup VGA video signal generation
@@ -27,5 +27,6 @@ int main() {
         stream_poll_event();
         tight_loop_contents();  
         terminal_render_cursor();
+        terminal_flush();
     }
 }
