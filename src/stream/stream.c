@@ -60,6 +60,9 @@ void stream_rx(uint8_t b){
                 stream_state.length = 0;
                 stream_state.crc = 0;
             }
+#ifdef DEBUG_PRINTS
+    printf("\nNEW MESSAGE\n");
+#endif
             break;
         
         // Store command and start generating CRC
@@ -67,6 +70,10 @@ void stream_rx(uint8_t b){
             stream_state.cmd = b;
             stream_state.crc = crc8_update(0, b);
             stream_state.rx_state = STREAM_RX_STATE_LEN;
+
+#ifdef DEBUG_PRINTS
+    printf("CMD: %d\n", b);
+#endif
             break;
 
         // Receive length (even no packets with no payload have a length byte)
@@ -81,12 +88,15 @@ void stream_rx(uint8_t b){
             }
 
             stream_state.buf_idx = 0;
-            // If length is 0, straight to CRC check
+            // If length is 0, straight to SEQ check
             if (b == 0){
-                stream_state.rx_state = STREAM_RX_STATE_CRC;
+                stream_state.rx_state = STREAM_RX_STATE_SEQ;
             } else {
                 stream_state.rx_state = STREAM_RX_STATE_ARG;
             }
+#ifdef DEBUG_PRINTS
+    printf("LEN: %d\n", b);
+#endif
             break;
 
         case STREAM_RX_STATE_ARG:
@@ -94,12 +104,43 @@ void stream_rx(uint8_t b){
             stream_state.buffer[stream_state.buf_idx++] = b;
 
             if (stream_state.buf_idx >= stream_state.length){
+                stream_state.rx_state = STREAM_RX_STATE_SEQ;
+            }
+#ifdef DEBUG_PRINTS
+    printf("ARG[%d]: %d\n", stream_state.buf_idx, b);
+#endif
+            break;
+
+        // Check the sequence byte so no messages were missed
+        case STREAM_RX_STATE_SEQ:
+            stream_state.crc = crc8_update(stream_state.crc, b);
+            stream_state.seq = b;
+
+            if (!stream_state.seq_initialized) {
+                // Always accept first packet
+                stream_state.prev_seq = stream_state.seq;
+                stream_state.seq_initialized = true;
                 stream_state.rx_state = STREAM_RX_STATE_CRC;
             }
+            else if ((uint8_t)(stream_state.prev_seq + 1) == stream_state.seq) {
+                // Correct next packet
+                stream_state.prev_seq = stream_state.seq;
+                stream_state.rx_state = STREAM_RX_STATE_CRC;
+            }
+            else {
+                // Packet loss / out of order
+                stream_state.rx_state = STREAM_RX_STATE_IDLE;
+            }
+#ifdef DEBUG_PRINTS
+    printf("SEQ: %d\n", b);
+#endif
             break;
         
         // Handle command if transmitted CRC matches our 
         case STREAM_RX_STATE_CRC:
+#ifdef DEBUG_PRINTS
+    printf("CRC: %d\n", b);
+#endif
             if (b == stream_state.crc){
                 stream_handle_command();
                 // TODO: send ack

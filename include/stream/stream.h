@@ -36,16 +36,20 @@ typedef enum {
     STREAM_RX_STATE_CMD,
     STREAM_RX_STATE_LEN,
     STREAM_RX_STATE_ARG,
+    STREAM_RX_STATE_SEQ,
     STREAM_RX_STATE_CRC,
 } STREAM_RX_STATE;
 
 typedef struct {
     STREAM_RX_STATE rx_state;
-    STREAM_CMD cmd;
-    uint8_t length;
-    uint8_t buffer[STREAM_MAX_PAYLOAD];
-    uint8_t buf_idx;
-    uint8_t crc;
+    STREAM_CMD      cmd;
+    uint8_t         length;
+    uint8_t         buffer[STREAM_MAX_PAYLOAD];
+    uint8_t         buf_idx;
+    bool            seq_initialized;
+    uint8_t         prev_seq;
+    uint8_t         seq;
+    uint8_t         crc;
 } stream_state_t;
 
 void stream_uart_init();
