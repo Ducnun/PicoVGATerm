@@ -3,7 +3,7 @@
 
 #include "video/vga.h"
 #include "render/fps.h"
-#include "terminal/terminal.h"
+#include "terminal/terminal_render.h"
 #include "stream/stream.h"
 
 #define VGA_PIO pio0

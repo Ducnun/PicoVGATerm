@@ -2,7 +2,7 @@
 
 #include <stdint.h>
 #include <hardware/uart.h>
-#include "terminal/terminal.h"
+#include "terminal/terminal_core.h"
 
 #define UART_ID uart0
 #define BAUD_RATE 1000000
