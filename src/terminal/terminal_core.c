@@ -178,7 +178,6 @@ void terminal_set_char(uint16_t px, uint16_t py, char c){
     cell->fg = terminal.default_fg;
     cell->bg = terminal.default_bg;
     terminal_mark_row_dirty(py);
-    // renderer_draw_char(px * FONT->width, py * FONT->height, c, cell->fg, cell->bg);
 }
 
 void terminal_set_char_c(uint16_t px, uint16_t py, char c, color_t fg, color_t bg){
@@ -200,7 +199,6 @@ void terminal_rm_char(uint16_t px, uint16_t py){
     cell->fg = terminal.default_fg;     // Probably not strictly necessary since any insertion updates this anyways
     cell->bg = terminal.default_bg;
     terminal_mark_row_dirty(py);
-    renderer_draw_char(px * FONT->width, py * FONT->height, ' ', cell->fg, cell->bg);
 }
 
 static void redraw_row(int screen_row) {

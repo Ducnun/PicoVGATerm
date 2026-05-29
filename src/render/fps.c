@@ -1,7 +1,7 @@
 #include "render/fps.h"
 
 void draw_fps(int fps) {
-    int x = 24;
+    int x = 300;
     int y = 8;
 
     // Optional: draw "FPS:"

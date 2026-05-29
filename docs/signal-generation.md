@@ -12,7 +12,67 @@ These 3 state machines are synchronised using interrupts. HSYNC and VSYNC are ru
 #### Synchronisation
 HSYNC drives the entire chain. It generates an hsync signal, and towards the end of 1 line signals the VSYNC state machine through an interrupt. The VSYNC state machine runs at the same speed but with less instructions and can thus execute all instructions and then wait until it is signaled again. The VSYNC state machine loops through a visible line for 480 interrupts from HSYNC. During these 480 lines, the output should be active and thus the RGB state machine is started. In lines 490-492 it generates the sync pulse without starting the RGB state machine, then goes back low for another 33 cycles for the full 525 lines. 
 The RGB state machine runs 5 times faster than HSYNC and VSYNC and can thus also execute all of its instructions well before it is signaled again. It gets its signal through the interrupt set by HSYNC on the first 480 cycles, representing active lines.
+From hsync.pio
+```PIOASM
+irq 0 [2]
+```
+This happens towards the end of one loop and triggers the IRQ 0 to signal any state machines listening to it that they can start. In vsync.pio, this signal is used to start the vsync signal and perform some checks:
+```PIOASM
+activefront: 
+    wait 1 irq 0
+    irq 1
+    jmp x-- activefront
+```
+This waits for irq 0 to be set, then signals IRQ 1 and loops around to wait on IRQ 0 again, thus relying fully on the hsync state machine. IRQ 1 in turn is used to signal the RGB state machine to start outputting data. 
+```PIOASM
+wait 1 irq 1 [3]
+```
+This wait happens every cycle, which is again faster than a single line since RGB data only cover about 80% of an actual line output. The 3 is used as the RGB state machine is clocked faster than hsync and vsync since it needs to perform multiple operations per pixel period.
+
+The orchestration of vsync and rgb output is done through the vsync state machine by using multiple short loops that together create the full loop per frame. Since PIO assembly does not allow variables larger than 31, we pull in a block of data from the FiFo to loop more than 31 times.
+```PIOASM
+pull block  ; Pull once as jump count for active field is to high for a normal nop
+
+.wrap_target
+
+mov x, osr  ; Copy value from OSR into x, will act as delay ops in the future
+
+activefront: 
+    wait 1 irq 0
+    irq 1
+    jmp x-- activefront ; use prevously pulled x to jump 639 times to start of activefront
+    
+set y, 9
+frontporch:
+    wait 1 irq 0
+    jmp y-- frontporch
+...
+...
+.wrap
+```
 
 ### DMA
 #### Usage
-The main usage of DMA in the signal generation chain is to provide a way for the PIO state machines to pull data out of the SRAM into the state machine's OSR. These pulls have to be done by the state machine and are never initiated by the DMA channel. This then allows the state machine to put the pulled byte onto the output pins with a single 'out' instruction. It could be configured to use autopull instead of having the state machine manually pull, but that is currently not needed for performance and reliability and only obfuscates logic. DMA is setup using 2 channels, one that provides the state machine with the pixel data (aptly called the rgb data channel) and one that resets this first channel (the rgb conf channel). This second channel has one purpose, to write the start of the framebuffer in memory to the start address for the data channel. When the data channel finishes its transfer, it automatically triggers the start of the second channel. This channel then performs it's single write operation into the original buffer and starts the data channel transfer again. 
+The main usage of DMA in the signal generation chain is to provide a way for the PIO state machines to pull data out of the SRAM into the state machine's OSR. 
+```PIOASM
+colorout:
+    pull block
+    out pins, 8 [3]
+    jmp x-- colorout
+```
+These pulls have to be done by the state machine and are never initiated by the DMA channel. This then allows the state machine to put the pulled byte onto the output pins with a single 'out' instruction. It could be configured to use autopull instead of having the state machine manually pull, but that is currently not needed for performance and reliability and only obfuscates logic.
+
+DMA is setup using 2 channels, one that provides the state machine with the pixel data (aptly called the rgb data channel) and one that resets this first channel (the rgb conf channel). This second channel has one purpose, to write the start of the framebuffer in memory to the start address for the data channel. When the data channel finishes its transfer, it automatically triggers the start of the second channel. This channel then performs it's single write operation into the original buffer and starts the data channel transfer again. 
+```C
+channel_config_set_chain_to(&c1, rgb_data_channel);
+
+dma_channel_configure(
+    rgb_conf_channel, // Channel to be configured
+    &c1, // Partial configuration created earlier
+    &dma_hw->ch[rgb_data_channel].read_addr, // Write address is start of data dma channel
+    &write_ptr, // Read address
+    1, // only 1 transfer everytime this dma channel is started
+    false // Don't start immediately
+);
+```
+The first line ensures that this DMA channel starts it's transfer when the data channel is done transferring. It then writes the pointer at the start of the framebuffer into the read address of the dma data channel.

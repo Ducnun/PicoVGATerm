@@ -1,0 +1,26 @@
+@startuml Component-Diagram
+
+struct framebuffer_t{
+    uint8_t* data;
+    uint16_t height;
+    uint16_t width;
+    uint16_t line_stride;
+}
+
+class vga
+
+class hsync
+
+class vsync
+
+class rgb
+
+class stream
+
+class terminal_core
+
+class terminal_render
+
+class renderer
+
+@enduml
