@@ -27,7 +27,7 @@ const terminal_t* terminal_get_const(void){
 }
 
 const terminal_cell_t* terminal_get_cell_const(uint16_t px, uint16_t py){
-    return terminal.cells + ((terminal.viewport_start + py) % terminal.rows * terminal.cols + px);
+    return terminal.cells + py + px * terminal.cols;
 }
 
 /*
@@ -160,16 +160,6 @@ void terminal_move_cursor(uint16_t px, uint16_t py){
     terminal.cursor->y = py;
 }
 
-void terminal_render_cursor(void){
-    if (!terminal.cursor->visible) return;
-
-    int px = terminal.cursor->x * FONT->width;
-    int py = terminal.cursor->y * FONT->height;
-
-    // simple version: invert block
-    renderer_fill_rectangle(px, py + FONT->height - 2, 2, FONT->width, terminal.default_fg);
-}
-
 void terminal_set_char(uint16_t px, uint16_t py, char c){
     if (px >= terminal.cols || py >= terminal.rows) return;
 
@@ -188,7 +178,6 @@ void terminal_set_char_c(uint16_t px, uint16_t py, char c, color_t fg, color_t b
     cell->fg = color_lut[fg];
     cell->bg = color_lut[bg];
     terminal_mark_row_dirty(py);
-    renderer_draw_char(px * FONT->width, py * FONT->height, c, cell->fg, cell->bg);
 }
 
 void terminal_rm_char(uint16_t px, uint16_t py){
@@ -203,9 +192,9 @@ void terminal_rm_char(uint16_t px, uint16_t py){
 
 static void redraw_row(int screen_row) {
     for (int col = 0; col < terminal.cols; col++) {
-        terminal_cell_t* cell = terminal_get_cell_mut(col, screen_row);
         terminal_mark_row_dirty(screen_row);
-        renderer_draw_char(col * FONT->width, screen_row * FONT->height, cell->c, cell->fg, cell->bg);
+        // terminal_cell_t* cell = terminal_get_cell_mut(col, screen_row);
+        // renderer_draw_char(col * FONT->width, screen_row * FONT->height, cell->c, cell->fg, cell->bg);
     }
 }
 

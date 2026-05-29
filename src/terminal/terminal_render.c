@@ -22,3 +22,14 @@ void terminal_flush(void){
         terminal->lines[y].flags &= ~LINE_FLAG_DIRTY;
     }
 }
+
+void terminal_render_cursor(void){
+    const terminal_t* terminal = terminal_get_const();
+    if (!terminal->cursor->visible) return;
+
+    int px = terminal->cursor->x * FONT->width;
+    int py = terminal->cursor->y * FONT->height;
+
+    // simple version: invert block
+    renderer_fill_rectangle(px, py + FONT->height - 2, 2, FONT->width, terminal->default_fg);
+}

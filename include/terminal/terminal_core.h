@@ -15,7 +15,6 @@ void terminal_set_default_bg(color_t color);
 void terminal_print_char(char c);
 void terminal_backspace(void);
 void terminal_newline(void);
-void terminal_render_cursor(void);
 void terminal_move_cursor(uint16_t px, uint16_t py);
 void terminal_clear(void);
 
