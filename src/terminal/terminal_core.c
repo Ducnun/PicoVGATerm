@@ -27,7 +27,7 @@ const terminal_t* terminal_get_const(void){
 }
 
 const terminal_cell_t* terminal_get_cell_const(uint16_t px, uint16_t py){
-    return terminal.cells + py + px * terminal.cols;
+    return terminal.cells + ((terminal.viewport_start + py) % terminal.rows * terminal.cols + px);
 }
 
 /*
@@ -105,7 +105,8 @@ void terminal_print_char(char c){
     }
     // Vertical wrap
     if (new_y >= terminal.rows){
-        terminal_scroll(1);
+        // terminal_scroll(1);
+        terminal_scroll_logical(1);
         new_y = terminal.rows - 1;
     }
     terminal_move_cursor(new_x, new_y);
@@ -145,7 +146,8 @@ void terminal_newline(void){
     uint16_t new_y = cursor.y + 1;
 
     if (new_y >= terminal.rows){
-        terminal_scroll(1);
+        // terminal_scroll(1);
+        terminal_scroll_logical(1);
         new_y = terminal.rows - 1;
     }
 
@@ -193,8 +195,6 @@ void terminal_rm_char(uint16_t px, uint16_t py){
 static void redraw_row(int screen_row) {
     for (int col = 0; col < terminal.cols; col++) {
         terminal_mark_row_dirty(screen_row);
-        // terminal_cell_t* cell = terminal_get_cell_mut(col, screen_row);
-        // renderer_draw_char(col * FONT->width, screen_row * FONT->height, cell->c, cell->fg, cell->bg);
     }
 }
 
@@ -231,6 +231,70 @@ void terminal_scroll(int rows){
         for (int r = 0; r < -rows; r++) {
             redraw_row(r);
         }
+    }
+}
+
+// Scroll that just updates the terminal logical state and does not touch the framebuffer once
+void terminal_scroll_logical(int rows)
+{
+    if (rows == 0) return;
+
+    if (rows > terminal.rows)
+        rows = terminal.rows;
+
+    if (rows < -terminal.rows)
+        rows = -terminal.rows;
+
+    // Move viewport
+    terminal.viewport_start =
+        (terminal.viewport_start + rows + terminal.rows)
+        % terminal.rows;
+
+    // Clear newly exposed rows
+    if (rows > 0) {
+
+        // scrolling up
+        for (int r = terminal.rows - rows; r < terminal.rows; r++) {
+
+            terminal.lines[r].length = 0;
+            terminal.lines[r].flags |= LINE_FLAG_DIRTY;
+
+            for (int c = 0; c < terminal.cols; c++) {
+
+                terminal_cell_t* cell =
+                    terminal_get_cell_mut(c, r);
+
+                cell->c = ' ';
+                cell->fg = terminal.default_fg;
+                cell->bg = terminal.default_bg;
+            }
+        }
+    }
+    else {
+
+        rows = -rows;
+
+        // scrolling down
+        for (int r = 0; r < rows; r++) {
+
+            terminal.lines[r].length = 0;
+            terminal.lines[r].flags |= LINE_FLAG_DIRTY;
+
+            for (int c = 0; c < terminal.cols; c++) {
+
+                terminal_cell_t* cell =
+                    terminal_get_cell_mut(c, r);
+
+                cell->c = ' ';
+                cell->fg = terminal.default_fg;
+                cell->bg = terminal.default_bg;
+            }
+        }
+    }
+
+    // Mark everything dirty
+    for (int r = 0; r < terminal.rows; r++) {
+        terminal.lines[r].flags |= LINE_FLAG_DIRTY;
     }
 }
 
