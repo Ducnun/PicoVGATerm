@@ -3,25 +3,52 @@
 void terminal_flush(void){
     const terminal_t* terminal = terminal_get_const();
     for (int y = 0; y < terminal->rows; y++) {
+        terminal_line_t* line = terminal->lines + y;
 
-        if (terminal->lines[y].flags & LINE_FLAG_FULL_DIRTY){
-            for (int x = 0; x < terminal->cols; x++) {
+        if (line->flags & LINE_FLAG_FULL_DIRTY){
+            uint16_t range_to_render = MAX(line->rendered_length, line->length) + 2;
+
+            for (int x = 0; x < range_to_render; x++) {
                 const terminal_cell_t* cell = terminal_get_cell_const(x, y);
+                terminal_clear_cell_flags(x, y, CELL_FLAG_DIRTY);
                 renderer_draw_char(x * FONT->width,y * FONT->height,cell->c,cell->fg,cell->bg);
             }
+            if (line->length < line->rendered_length) {
+                renderer_fill_rectangle(
+                    line->length * FONT->width,
+                    y * FONT->height,
+                    (line->rendered_length - line->length) * FONT->width,
+                    FONT->height,
+                    terminal->default_bg
+                );
+            }
+            line->rendered_length = line->length;
         }
 
-        else if (terminal->lines[y].flags & LINE_FLAG_PARTIAL_DIRTY){
-            for (int x = 0; x < terminal->cols; x++) {
+        else if (line->flags & LINE_FLAG_PARTIAL_DIRTY){
+            // Take cursor into account
+            uint16_t range_to_render = MAX(line->rendered_length, line->length) + 2;
+
+            for (int x = 0; x < range_to_render; x++) {
                 const terminal_cell_t* cell = terminal_get_cell_const(x, y);
                 if (cell->flags & CELL_FLAG_DIRTY){
                     renderer_draw_char(x * FONT->width,y * FONT->height,cell->c,cell->fg,cell->bg);
                     terminal_clear_cell_flags(x, y, CELL_FLAG_DIRTY);
                 }
             }
+            if (line->length < line->rendered_length) {
+                renderer_fill_rectangle(
+                    line->length * FONT->width,
+                    y * FONT->height,
+                    (line->rendered_length - line->length) * FONT->width,
+                    FONT->height,
+                    terminal->default_bg
+                );
+            }
+            line->rendered_length = line->length;
         }
 
-        terminal->lines[y].flags &= ~(LINE_FLAG_FULL_DIRTY | LINE_FLAG_PARTIAL_DIRTY);
+        line->flags &= ~(LINE_FLAG_FULL_DIRTY | LINE_FLAG_PARTIAL_DIRTY);
     }
 }
 
