@@ -30,6 +30,9 @@ void terminal_flush(void){
 }
 
 void terminal_render_cursor(void){
+    static uint32_t last_time;
+    static bool flash;
+
     const terminal_t* terminal = terminal_get_const();
     if (!terminal->cursor->visible) return;
 
@@ -37,5 +40,15 @@ void terminal_render_cursor(void){
     int py = terminal->cursor->y * FONT->height;
 
     // simple version: invert block
-    renderer_fill_rectangle(px, py + FONT->height - 2, 2, FONT->width, terminal->default_fg);
+
+    if (to_ms_since_boot(get_absolute_time()) > last_time + terminal->cursor->delay){
+        if (flash){
+            renderer_fill_rectangle(px, py, FONT->height, FONT->width, terminal->default_fg);
+        }
+        else {
+            renderer_fill_rectangle(px, py, FONT->height, FONT->width, terminal->default_bg);
+        }
+        flash = !flash;
+        last_time = to_ms_since_boot(get_absolute_time());
+    }
 }

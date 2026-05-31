@@ -50,6 +50,8 @@ static inline void terminal_mark_row_dirty(int row){
 void terminal_init(void){
     terminal.viewport_start = 0;
 
+    terminal.cursor->delay = 500;
+
     for (int y = 0; y < terminal.rows; y++){
         terminal.lines[y].length = 0;
 
