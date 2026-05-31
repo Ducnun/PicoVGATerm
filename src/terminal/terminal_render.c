@@ -4,28 +4,24 @@ void terminal_flush(void){
     const terminal_t* terminal = terminal_get_const();
     for (int y = 0; y < terminal->rows; y++) {
 
-        if (!(terminal->lines[y].flags & LINE_FLAG_DIRTY))
-            continue;
-
-        if (terminal->lines[y].flags & LINE_FLAG_CLEARED){
-            renderer_fill_rectangle(0, y, FONT->height, terminal->cols * FONT->width, terminal->default_bg);
-            terminal->lines[y].flags &= ~LINE_FLAG_CLEARED;
-            continue;
+        if (terminal->lines[y].flags & LINE_FLAG_FULL_DIRTY){
+            for (int x = 0; x < terminal->cols; x++) {
+                const terminal_cell_t* cell = terminal_get_cell_const(x, y);
+                renderer_draw_char(x * FONT->width,y * FONT->height,cell->c,cell->fg,cell->bg);
+            }
         }
 
-        for (int x = 0; x < terminal->cols; x++) {
-            const terminal_cell_t* cell = terminal_get_cell_const(x, y);
-
-            renderer_draw_char(
-                x * FONT->width,
-                y * FONT->height,
-                cell->c,
-                cell->fg,
-                cell->bg
-            );
+        else if (terminal->lines[y].flags & LINE_FLAG_PARTIAL_DIRTY){
+            for (int x = 0; x < terminal->cols; x++) {
+                const terminal_cell_t* cell = terminal_get_cell_const(x, y);
+                if (cell->flags & CELL_FLAG_DIRTY){
+                    renderer_draw_char(x * FONT->width,y * FONT->height,cell->c,cell->fg,cell->bg);
+                    terminal_clear_cell_flags(x, y, CELL_FLAG_DIRTY);
+                }
+            }
         }
 
-        terminal->lines[y].flags &= ~LINE_FLAG_DIRTY;
+        terminal->lines[y].flags &= ~(LINE_FLAG_FULL_DIRTY | LINE_FLAG_PARTIAL_DIRTY);
     }
 }
 

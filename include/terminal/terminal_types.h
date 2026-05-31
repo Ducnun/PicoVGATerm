@@ -8,9 +8,9 @@
 #define CELL_FLAG_DIRTY     (1 << 0)
 
 // Line flags
-#define LINE_FLAG_WRAPPED   (1 << 0)
-#define LINE_FLAG_DIRTY     (1 << 1)
-#define LINE_FLAG_CLEARED   (1 << 2)
+#define LINE_FLAG_WRAPPED       (1 << 0)
+#define LINE_FLAG_PARTIAL_DIRTY (1 << 1)
+#define LINE_FLAG_FULL_DIRTY    (1 << 2)
 
 // Standard terminal cell datafields, location is relative to the array and thus not stored
 typedef struct{

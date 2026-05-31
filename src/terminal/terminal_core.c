@@ -20,7 +20,21 @@ terminal_t terminal = {
 };
 
 /*
-** Global getters
+** Local getters and setters
+*/
+
+static inline terminal_cell_t* terminal_get_cell_mut(uint16_t px, uint16_t py){
+    return terminal.cells + ((terminal.viewport_start + py) % terminal.rows * terminal.cols + px);
+}
+
+static inline void terminal_mark_cell_dirty(uint16_t px, uint16_t py){
+    if (px > terminal.cols || py > terminal.rows) return;
+    terminal.lines[py].flags |= LINE_FLAG_PARTIAL_DIRTY;
+    terminal_get_cell_mut(px, py)->flags |= CELL_FLAG_DIRTY;
+}
+
+/*
+** Global getters and setters
 */
 const terminal_t* terminal_get_const(void){
     return &terminal;
@@ -30,21 +44,12 @@ const terminal_cell_t* terminal_get_cell_const(uint16_t px, uint16_t py){
     return terminal.cells + ((terminal.viewport_start + py) % terminal.rows * terminal.cols + px);
 }
 
-/*
-** Local getters and setters
-*/
-
-static inline terminal_cell_t* terminal_get_cell_mut(uint16_t px, uint16_t py){
-    return terminal.cells + ((terminal.viewport_start + py) % terminal.rows * terminal.cols + px);
-}
-
-static inline void terminal_mark_row_dirty(int row){
-    if (row < 0 || row >= terminal.rows) return;
-    terminal.lines[row].flags |= LINE_FLAG_DIRTY;
+void terminal_clear_cell_flags(uint16_t px, uint16_t py, uint8_t mask){
+    terminal_get_cell_mut(px, py)->flags &= ~mask;
 }
 
 /*
-** Terminal logic functions
+** Terminal high level API
 */
 
 void terminal_init(void){
@@ -66,7 +71,7 @@ void terminal_init(void){
     // Now actually draw it
     for (int y = 0; y < terminal.rows; y++){
         for (int x = 0; x < terminal.cols; x++){
-            terminal_redraw_cell(x, y);
+            terminal_mark_cell_dirty(x, y);
         }
     }
 }
@@ -84,7 +89,7 @@ void terminal_set_default_bg(color_t color){
 
             cell->bg = terminal.default_bg;
 
-            terminal_redraw_cell(x, y);
+            terminal_mark_cell_dirty(x, y);
         }
     }
 }
@@ -154,10 +159,14 @@ void terminal_newline(void){
     terminal_move_cursor(new_x, new_y);
 }
 
+/**
+** Terminal helper functions
+*/
+
 void terminal_move_cursor(uint16_t px, uint16_t py){
     if (px == terminal.cursor->x && py == terminal.cursor->y) return;
 
-    terminal_redraw_cell(terminal.cursor->x, terminal.cursor->y);
+    terminal_mark_cell_dirty(terminal.cursor->x, terminal.cursor->y);
     terminal.cursor->x = px;
     terminal.cursor->y = py;
 }
@@ -169,7 +178,7 @@ void terminal_set_char(uint16_t px, uint16_t py, char c){
     cell->c = c;
     cell->fg = terminal.default_fg;
     cell->bg = terminal.default_bg;
-    terminal_mark_row_dirty(py);
+    terminal_mark_cell_dirty(px, py);
 }
 
 void terminal_set_char_c(uint16_t px, uint16_t py, char c, color_t fg, color_t bg){
@@ -179,7 +188,7 @@ void terminal_set_char_c(uint16_t px, uint16_t py, char c, color_t fg, color_t b
     cell->c = c;
     cell->fg = color_lut[fg];
     cell->bg = color_lut[bg];
-    terminal_mark_row_dirty(py);
+    terminal_mark_cell_dirty(px, py);
 }
 
 void terminal_rm_char(uint16_t px, uint16_t py){
@@ -189,7 +198,7 @@ void terminal_rm_char(uint16_t px, uint16_t py){
     cell-> c = ' ';
     cell->fg = terminal.default_fg;     // Probably not strictly necessary since any insertion updates this anyways
     cell->bg = terminal.default_bg;
-    terminal_mark_row_dirty(py);
+    terminal_mark_cell_dirty(px, py);
 }
 
 // Scroll that just updates the terminal logical state and does not touch the framebuffer once
@@ -215,7 +224,7 @@ void terminal_scroll(int rows)
         for (int r = terminal.rows - rows; r < terminal.rows; r++) {
 
             terminal.lines[r].length = 0;
-            terminal.lines[r].flags |= LINE_FLAG_DIRTY;
+            terminal.lines[r].flags |= LINE_FLAG_FULL_DIRTY;
 
             for (int c = 0; c < terminal.cols; c++) {
 
@@ -236,7 +245,7 @@ void terminal_scroll(int rows)
         for (int r = 0; r < rows; r++) {
 
             terminal.lines[r].length = 0;
-            terminal.lines[r].flags |= LINE_FLAG_DIRTY;
+            terminal.lines[r].flags |= LINE_FLAG_FULL_DIRTY;
 
             for (int c = 0; c < terminal.cols; c++) {
 
@@ -252,12 +261,8 @@ void terminal_scroll(int rows)
 
     // Mark everything dirty
     for (int r = 0; r < terminal.rows; r++) {
-        terminal.lines[r].flags |= LINE_FLAG_DIRTY;
+        terminal.lines[r].flags |= LINE_FLAG_FULL_DIRTY;
     }
-}
-
-void terminal_redraw_cell(uint16_t px, uint16_t py){
-    terminal_mark_row_dirty(py);
 }
 
 void terminal_clear(void){
@@ -267,6 +272,6 @@ void terminal_clear(void){
         for (int col = 0; col < terminal.cols; col++){
             terminal.cells[row + col * terminal.rows].c = ' ';
         }
-        terminal.lines[terminal.cursor->y].flags |= LINE_FLAG_CLEARED || LINE_FLAG_DIRTY;
+        terminal.lines[terminal.cursor->y].flags |= LINE_FLAG_FULL_DIRTY;
     }
 }
