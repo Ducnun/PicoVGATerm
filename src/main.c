@@ -24,6 +24,7 @@ int main(){
     set_font(&FONT_ENVIOUS);
 
     while (true) {
+        show_fps();
         stream_poll_event();
         tight_loop_contents();  
         terminal_render_cursor();

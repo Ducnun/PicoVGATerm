@@ -8,8 +8,9 @@
 #define CELL_FLAG_DIRTY     (1 << 0)
 
 // Line flags
-#define LINE_FLAG_WRAPPED   (1 << 0)
-#define LINE_FLAG_DIRTY     (1 << 1)
+#define LINE_FLAG_WRAPPED       (1 << 0)
+#define LINE_FLAG_PARTIAL_DIRTY (1 << 1)
+#define LINE_FLAG_FULL_DIRTY    (1 << 2)
 
 // Standard terminal cell datafields, location is relative to the array and thus not stored
 typedef struct{
@@ -30,8 +31,10 @@ typedef struct{
     uint8_t     x;
     uint8_t     y;
     bool        visible;
+    uint16_t     delay;
 } cursor_t;
 
+// Full terminal state struct
 typedef struct{
     uint16_t            cols;
     uint16_t            rows;
