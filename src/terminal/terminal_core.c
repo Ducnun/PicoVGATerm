@@ -105,8 +105,7 @@ void terminal_print_char(char c){
     }
     // Vertical wrap
     if (new_y >= terminal.rows){
-        // terminal_scroll(1);
-        terminal_scroll_logical(1);
+        terminal_scroll(1);
         new_y = terminal.rows - 1;
     }
     terminal_move_cursor(new_x, new_y);
@@ -146,8 +145,7 @@ void terminal_newline(void){
     uint16_t new_y = cursor.y + 1;
 
     if (new_y >= terminal.rows){
-        // terminal_scroll(1);
-        terminal_scroll_logical(1);
+        terminal_scroll(1);
         new_y = terminal.rows - 1;
     }
 
@@ -192,50 +190,8 @@ void terminal_rm_char(uint16_t px, uint16_t py){
     terminal_mark_row_dirty(py);
 }
 
-static void redraw_row(int screen_row) {
-    for (int col = 0; col < terminal.cols; col++) {
-        terminal_mark_row_dirty(screen_row);
-    }
-}
-
-void terminal_scroll(int rows){
-    if (rows > terminal.rows) rows = terminal.rows;
-    if (rows < -terminal.rows) rows = -terminal.rows;
-
-    terminal.viewport_start = (terminal.viewport_start + rows + terminal.rows) % terminal.rows;
-
-    renderer_scroll_vertical(rows * FONT->height);
-    
-    if (rows > 0) {
-        for (int r = terminal.rows - rows; r < terminal.rows; r++) {
-
-            // Clear logical buffer row
-            for (int c = 0; c < terminal.cols; c++) {
-                terminal_cell_t* cell = terminal_get_cell_mut(c, r);
-                cell->c = ' ';
-                cell->fg = terminal.default_fg;
-                cell->bg = terminal.default_bg;
-            }
-
-            terminal.lines[r].length = 0;
-        }
-
-        renderer_fill_rectangle(0, terminal.rows * FONT->height - FONT->height * rows, FONT->height * terminal.rows, terminal.cols * FONT->width, terminal.default_bg);
-        // redraw bottom rows
-        for (int r = terminal.rows - rows; r < terminal.rows; r++) {
-            redraw_row(r);
-        }
-    } else if (rows < 0) {
-        renderer_fill_rectangle(0, 0, FONT->height * -rows, terminal.cols * FONT->width, terminal.default_bg);
-        // redraw top rows
-        for (int r = 0; r < -rows; r++) {
-            redraw_row(r);
-        }
-    }
-}
-
 // Scroll that just updates the terminal logical state and does not touch the framebuffer once
-void terminal_scroll_logical(int rows)
+void terminal_scroll(int rows)
 {
     if (rows == 0) return;
 
@@ -299,9 +255,7 @@ void terminal_scroll_logical(int rows)
 }
 
 void terminal_redraw_cell(uint16_t px, uint16_t py){
-    terminal_cell_t* cell = terminal_get_cell_mut(px, py);
     terminal_mark_row_dirty(py);
-    renderer_draw_char(px * FONT->width, py * FONT->height, cell->c, cell->fg, cell->bg);
 }
 
 void terminal_clear(void){
@@ -311,6 +265,6 @@ void terminal_clear(void){
         for (int col = 0; col < terminal.cols; col++){
             terminal.cells[row + col * terminal.rows].c = ' ';
         }
+        terminal.lines[terminal.cursor->y].flags |= LINE_FLAG_CLEARED || LINE_FLAG_DIRTY;
     }
-    renderer_fill_rectangle(0, 0, terminal.rows * FONT->height, terminal.cols * FONT->width, terminal.default_bg);
 }

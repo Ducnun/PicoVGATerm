@@ -4,6 +4,8 @@ void renderer_draw_char(int px, int py, char c, color_t fg, color_t bg) {
     framebuffer_t fb = get_framebuffer();
     if (px < 0 || py < 0 || px + FONT->width > fb.width || py + FONT->height > fb.height) return;
 
+    if (c == ' ') return renderer_fill_rectangle(px, py, FONT->height, FONT->width, bg);
+
     const uint8_t* glyph = font_get_glyph(c);
 
     uint8_t fg_val = color_lut[fg];

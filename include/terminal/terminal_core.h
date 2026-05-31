@@ -2,7 +2,6 @@
 
 #include <memory.h>
 #include "terminal/terminal_types.h"
-#include "render/renderer.h"
 
 #define TERMINAL_ROWS   60
 #define TERMINAL_COLS   80
@@ -20,7 +19,6 @@ void terminal_move_cursor(uint16_t px, uint16_t py);
 void terminal_clear(void);
 
 void terminal_scroll(int rows);
-void terminal_scroll_logical(int rows);
 void terminal_set_char(uint16_t px, uint16_t py, char c);
 void terminal_set_char_c(uint16_t px, uint16_t py, char c, color_t fg, color_t bg);
 void terminal_rm_char(uint16_t px, uint16_t py);

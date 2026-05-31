@@ -7,6 +7,12 @@ void terminal_flush(void){
         if (!(terminal->lines[y].flags & LINE_FLAG_DIRTY))
             continue;
 
+        if (terminal->lines[y].flags & LINE_FLAG_CLEARED){
+            renderer_fill_rectangle(0, y, FONT->height, terminal->cols * FONT->width, terminal->default_bg);
+            terminal->lines[y].flags &= ~LINE_FLAG_CLEARED;
+            continue;
+        }
+
         for (int x = 0; x < terminal->cols; x++) {
             const terminal_cell_t* cell = terminal_get_cell_const(x, y);
 
