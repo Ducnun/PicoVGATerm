@@ -206,8 +206,7 @@ void terminal_rm_char(uint16_t px, uint16_t py){
 }
 
 // Scroll that just updates the terminal logical state and does not touch the framebuffer once
-void terminal_scroll(int rows)
-{
+void terminal_scroll(int rows){
     if (rows == 0) return;
     if (rows > terminal.rows) rows = terminal.rows;
     if (rows < -terminal.rows) rows = -terminal.rows;
