@@ -98,7 +98,7 @@ void terminal_set_default_bg(color_t color){
             cell->bg = terminal.default_bg;
 
             terminal_mark_cell_dirty(x, y);
-        }
+        }   
     }
 }
 
@@ -106,7 +106,7 @@ void terminal_print_char(char c){
     terminal_set_char(terminal.cursor->x, terminal.cursor->y, c);
 
     // Update line end
-    if (terminal.cursor->x > terminal.lines[terminal.cursor->y].length){
+    if (terminal.cursor->x >= terminal.lines[terminal.cursor->y].length){
         terminal.lines[terminal.cursor->y].length = terminal.cursor->x + 1;
     }
 
@@ -209,24 +209,16 @@ void terminal_rm_char(uint16_t px, uint16_t py){
 void terminal_scroll(int rows)
 {
     if (rows == 0) return;
-
-    if (rows > terminal.rows)
-        rows = terminal.rows;
-
-    if (rows < -terminal.rows)
-        rows = -terminal.rows;
+    if (rows > terminal.rows) rows = terminal.rows;
+    if (rows < -terminal.rows) rows = -terminal.rows;
 
     // Move viewport
-    terminal.viewport_start =
-        (terminal.viewport_start + rows + terminal.rows)
-        % terminal.rows;
+    terminal.viewport_start = (terminal.viewport_start + rows + terminal.rows) % terminal.rows;
 
     // Clear newly exposed rows
     if (rows > 0) {
-
         // scrolling up
         for (int r = terminal.rows - rows; r < terminal.rows; r++) {
-
             terminal.lines[r].length = 0;
             terminal.lines[r].flags |= LINE_FLAG_FULL_DIRTY;
 
@@ -236,12 +228,10 @@ void terminal_scroll(int rows)
         }
     }
     else {
-
         rows = -rows;
 
         // scrolling down
         for (int r = 0; r < rows; r++) {
-
             terminal.lines[r].length = 0;
             terminal.lines[r].flags |= LINE_FLAG_FULL_DIRTY;
 

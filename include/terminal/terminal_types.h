@@ -23,7 +23,6 @@ typedef struct{
 // Information per terminal line, for better cursor movements
 typedef struct{
     uint16_t    length;
-    uint16_t    rendered_length;
     uint8_t     flags;
 } terminal_line_t;
 

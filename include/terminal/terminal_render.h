@@ -4,5 +4,9 @@
 #include "render/renderer.h"
 #include "hardware/timer.h"
 
+typedef struct{
+    uint16_t rendered_length;
+} render_line_cache_t;
+
 void terminal_flush();
 void terminal_render_cursor();
