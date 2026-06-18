@@ -1,0 +1,83 @@
+@startuml
+skinparam style strictuml
+skinparam SequenceMessageAlignment center
+
+participant "Host (Sender)" as Host
+box "RP2350 Hardware" #LightBlue
+    participant "UART Peripheral" as UART
+end box
+
+box "Stream Subsystem (stream.c)" #LightGreen
+    participant "on_uart_rx (IRQ)" as IRQ
+    participant "rx_ring (Buffer)" as Ring
+    participant "stream_poll_event" as Poll
+    participant "stream_rx (FSM)" as FSM
+    participant "stream_handle_command" as CmdHandler
+end box
+
+box "Terminal Core (terminal_core.c)" #Yellow
+    participant "terminal_high_level" as API
+    participant "terminal_internal" as Internal
+    database "Terminal State (RAM)" as State
+end box
+
+== Async Data Reception (IRQ Context) ==
+
+Host -> UART : Serial Data (1 MBps)
+UART -> IRQ : Trigger IRQ (on_uart_rx)
+activate IRQ
+IRQ -> UART : uart_getc()
+IRQ -> Ring : Store byte at rx_head
+IRQ -> IRQ : Increment rx_head
+deactivate IRQ
+
+== Main Loop Processing ==
+
+loop while rx_tail != rx_head
+    Poll -> Ring : Read byte at rx_tail
+    Poll -> FSM : stream_rx(byte)
+    activate FSM
+    
+    alt state == IDLE (0xFF received)
+        FSM -> FSM : Reset FSM & CRC
+    else state == CMD/LEN/ARG/SEQ
+        FSM -> FSM : Update CRC calculation
+        FSM -> FSM : Transition state
+    else state == CRC
+        FSM -> FSM : Compare calculated vs received
+        
+        alt CRC Matches & Seq OK
+            FSM -> CmdHandler : stream_handle_command()
+            activate CmdHandler
+            
+            note over CmdHandler : Example: STREAM_CMD_PRINT_CHAR
+            
+            CmdHandler -> API : terminal_print_char(c)
+            activate API
+            
+            API -> Internal : terminal_set_char(x, y, c)
+            activate Internal
+            Internal -> State : Write 'c' to screencells[idx]
+            Internal -> Internal : terminal_mark_cell_dirty(x, y)
+            Internal -> State : Set CELL_FLAG_DIRTY
+            Internal -> State : Set LINE_FLAG_PARTIAL_DIRTY
+            deactivate Internal
+            
+            API -> Internal : terminal_move_cursor(new_x, new_y)
+            activate Internal
+            Internal -> State : Update cursor.x, cursor.y
+            Internal -> State : Mark old and new cell dirty
+            deactivate Internal
+            
+            deactivate API
+            deactivate CmdHandler
+        else CRC Fail or Seq Mismatch
+            FSM -> FSM : Reset to IDLE (Discard packet)
+        end
+    end
+    
+    deactivate FSM
+    Poll -> Poll : Increment rx_tail
+end
+
+@enduml
