@@ -33,6 +33,14 @@ static inline void terminal_mark_cell_dirty(uint16_t px, uint16_t py){
     terminal_get_cell_mut(px, py)->flags |= CELL_FLAG_DIRTY;
 }
 
+static inline void terminal_clear_cell(uint16_t px, uint16_t py){
+    terminal_cell_t* cell = terminal_get_cell_mut(px, py);
+    cell->c = ' ';
+    cell->fg = terminal.default_fg;
+    cell->bg = terminal.default_bg;
+    cell->flags |= CELL_FLAG_DIRTY;
+}
+
 /*
 ** Global getters and setters
 */
@@ -90,7 +98,7 @@ void terminal_set_default_bg(color_t color){
             cell->bg = terminal.default_bg;
 
             terminal_mark_cell_dirty(x, y);
-        }
+        }   
     }
 }
 
@@ -98,7 +106,7 @@ void terminal_print_char(char c){
     terminal_set_char(terminal.cursor->x, terminal.cursor->y, c);
 
     // Update line end
-    if (terminal.cursor->x > terminal.lines[terminal.cursor->y].length){
+    if (terminal.cursor->x >= terminal.lines[terminal.cursor->y].length){
         terminal.lines[terminal.cursor->y].length = terminal.cursor->x + 1;
     }
 
@@ -169,6 +177,7 @@ void terminal_move_cursor(uint16_t px, uint16_t py){
     terminal_mark_cell_dirty(terminal.cursor->x, terminal.cursor->y);
     terminal.cursor->x = px;
     terminal.cursor->y = py;
+    terminal_mark_cell_dirty(px, py);
 }
 
 void terminal_set_char(uint16_t px, uint16_t py, char c){
@@ -193,68 +202,40 @@ void terminal_set_char_c(uint16_t px, uint16_t py, char c, color_t fg, color_t b
 
 void terminal_rm_char(uint16_t px, uint16_t py){
     if (px >= terminal.cols || py >= terminal.rows) return;
-
-    terminal_cell_t* cell = terminal_get_cell_mut(px, py);
-    cell-> c = ' ';
-    cell->fg = terminal.default_fg;     // Probably not strictly necessary since any insertion updates this anyways
-    cell->bg = terminal.default_bg;
-    terminal_mark_cell_dirty(px, py);
+    terminal_clear_cell(px, py);
 }
 
 // Scroll that just updates the terminal logical state and does not touch the framebuffer once
-void terminal_scroll(int rows)
-{
+void terminal_scroll(int rows){
     if (rows == 0) return;
-
-    if (rows > terminal.rows)
-        rows = terminal.rows;
-
-    if (rows < -terminal.rows)
-        rows = -terminal.rows;
+    if (rows > terminal.rows) rows = terminal.rows;
+    if (rows < -terminal.rows) rows = -terminal.rows;
 
     // Move viewport
-    terminal.viewport_start =
-        (terminal.viewport_start + rows + terminal.rows)
-        % terminal.rows;
+    terminal.viewport_start = (terminal.viewport_start + rows + terminal.rows) % terminal.rows;
 
     // Clear newly exposed rows
     if (rows > 0) {
-
         // scrolling up
         for (int r = terminal.rows - rows; r < terminal.rows; r++) {
-
             terminal.lines[r].length = 0;
             terminal.lines[r].flags |= LINE_FLAG_FULL_DIRTY;
 
             for (int c = 0; c < terminal.cols; c++) {
-
-                terminal_cell_t* cell =
-                    terminal_get_cell_mut(c, r);
-
-                cell->c = ' ';
-                cell->fg = terminal.default_fg;
-                cell->bg = terminal.default_bg;
+                terminal_clear_cell(c, r);
             }
         }
     }
     else {
-
         rows = -rows;
 
         // scrolling down
         for (int r = 0; r < rows; r++) {
-
             terminal.lines[r].length = 0;
             terminal.lines[r].flags |= LINE_FLAG_FULL_DIRTY;
 
             for (int c = 0; c < terminal.cols; c++) {
-
-                terminal_cell_t* cell =
-                    terminal_get_cell_mut(c, r);
-
-                cell->c = ' ';
-                cell->fg = terminal.default_fg;
-                cell->bg = terminal.default_bg;
+                terminal_clear_cell(c, r);
             }
         }
     }
@@ -270,8 +251,8 @@ void terminal_clear(void){
     terminal.cursor->y = 0;
     for (int row = 0; row < terminal.rows; row++){
         for (int col = 0; col < terminal.cols; col++){
-            terminal.cells[row + col * terminal.rows].c = ' ';
+            terminal_clear_cell(col, row);
         }
-        terminal.lines[terminal.cursor->y].flags |= LINE_FLAG_FULL_DIRTY;
+        terminal.lines[row].flags |= LINE_FLAG_FULL_DIRTY;
     }
 }
